@@ -25,26 +25,41 @@ function setup(){
   noLoop();
 
   // UI hooks
-  inputEl = document.getElementById('textInput'); // now a textarea
+  inputEl = document.getElementById('chatInput');
   generateBtn = document.getElementById('generateBtn');
 
-  // Auto-resize textarea (chat-like)
-  function autoResize(){
-    const maxHraw = getComputedStyle(document.documentElement).getPropertyValue('--input-max-height') || '220px';
-    const maxH = parseInt(maxHraw.replace('px',''), 10) || 220;
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, maxH) + 'px';
-  }
-  inputEl.addEventListener('input', autoResize);
-  setTimeout(autoResize, 0);
+  // Backwards-compatible fallback (if textarea still present in older versions)
+  if(!inputEl) inputEl = document.getElementById('textInput');
 
-  // Ctrl/Cmd+Enter to submit (Enter alone inserts newline)
-  inputEl.addEventListener('keydown', (e) => {
-    if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
-      e.preventDefault();
-      generateFromText(inputEl.value || inputEl.placeholder);
+  if(inputEl){
+    if(inputEl.tagName.toLowerCase() === 'textarea'){
+      // Auto-resize textarea (chat-like)
+      function autoResize(){
+        const maxHraw = getComputedStyle(document.documentElement).getPropertyValue('--input-max-height') || '220px';
+        const maxH = parseInt(maxHraw.replace('px',''), 10) || 220;
+        inputEl.style.height = 'auto';
+        inputEl.style.height = Math.min(inputEl.scrollHeight, maxH) + 'px';
+      }
+      inputEl.addEventListener('input', autoResize);
+      setTimeout(autoResize, 0);
+
+      // Ctrl/Cmd+Enter to submit (Enter alone inserts newline)
+      inputEl.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+          e.preventDefault();
+          generateFromText(inputEl.value || inputEl.placeholder);
+        }
+      });
+    } else {
+      // Single-line input: Enter submits immediately
+      inputEl.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          generateFromText(inputEl.value || inputEl.placeholder);
+        }
+      });
     }
-  });
+  }
 
   generateBtn.addEventListener('click', () => generateFromText(inputEl.value || inputEl.placeholder));
 

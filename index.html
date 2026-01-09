@@ -28,12 +28,13 @@
     <div id="canvasHolder" class="rounded-xl p-6"></div>
   </main>
 
-  <div class="aether-panel p-3 rounded-lg" role="region" aria-label="Aether controls">
-    <textarea id="textInput" class="aether-input p-3 rounded-lg" placeholder="Type something expressive — press Generate or use Ctrl/Cmd+Enter"></textarea>
-    <button id="generateBtn" class="aether-btn rounded-lg px-4 py-2" aria-label="Generate artwork"><span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span><span class="btn-label">Generate</span></button>
-  </div>
+  <div class="chat-card" role="search" aria-label="Chat input">
+    <button class="icon-btn" aria-hidden="true"><span class="material-symbols-outlined" aria-hidden="true">menu</span></button>
+    <input id="chatInput" class="chat-input" type="search" placeholder="Ask Le Chat anything" />
+    <button id="generateBtn" class="visually-hidden">Generate</button>
+  </div>"},{
 
-  <div class="attribution">Aether • p5.js • Local</div>
+  <div class="attribution">Aether</div>
 
   <script src="src/sketch.js"></script>
 </body>

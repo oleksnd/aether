@@ -77,6 +77,14 @@ html,body{height:100%;margin:0;background:var(--aether-bg);font-family:Inter,sys
 /* Floating panel component */
 .aether-panel{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--panel-bottom);display:flex;align-items:center;gap:var(--panel-gap);padding:var(--panel-padding);border-radius:var(--panel-radius);background:var(--card-bg);border:var(--border-width) solid var(--glass-border);box-shadow:var(--panel-shadow);width:min(var(--panel-max-width),calc(100% - var(--panel-offset)));}
 
+/* Compact chat-style input (matches screenshot; we remove controls we don't have) */
+.chat-card{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--panel-bottom);display:flex;align-items:center;gap:var(--panel-gap);padding:var(--panel-padding);border-radius:var(--panel-radius);background:var(--card-bg);border:var(--border-width) solid rgba(16,24,40,0.04);box-shadow:var(--panel-shadow);width:min(var(--panel-max-width),calc(100% - var(--panel-offset)));}
+.icon-btn{width:calc(2.2 * var(--icon-size));height:calc(2.2 * var(--icon-size));border-radius:var(--btn-radius);border:var(--border-width) solid rgba(16,24,40,0.06);display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--card-bg),var(--input-bg));cursor:pointer}
+.icon-btn .material-symbols-outlined{font-size:calc(0.9 * var(--icon-size));color:var(--muted)}
+.chat-input{flex:1;border:none;background:transparent;font-size:1.02rem;padding-left:0;padding-right:0;color:var(--accent);min-width:20ch}
+.chat-input::placeholder{color:var(--muted);opacity:0.9}
+.visually-hidden{position:absolute!important;height:var(--border-width);width:var(--border-width);overflow:hidden;clip:rect(var(--border-width),var(--border-width),var(--border-width),var(--border-width));white-space:nowrap;border:0;padding:0;margin:calc(var(--border-width) * -1)}
+
 /* Input component (textarea) */
 .aether-input{flex:1;min-height:var(--input-min-height);max-height:var(--input-max-height);padding:var(--input-padding);border-radius:var(--input-radius);background:var(--input-bg);border:var(--border-width) solid var(--glass-border);font-size:0.94rem;line-height:1.4;resize:vertical;color:var(--accent)}
 .aether-input:focus{outline:none;box-shadow:var(--focus-ring-shadow);border-color:var(--input-focus-border)}
