@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AuraScript — Generative Watercolor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--overlay-bg: rgba(255,255,255,0.9);--accent:#3b3b3b}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    #canvasHolder{display:flex;align-items:center;justify-content:center;padding:20px}
+    canvas{box-shadow:0 8px 30px rgba(20,20,20,0.15);border-radius:6px}
+
+    /* Bottom UI */
+    .controls{
+      position:fixed;left:50%;transform:translateX(-50%);bottom:28px;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--overlay-bg);backdrop-filter:blur(6px);box-shadow:0 6px 20px rgba(20,20,20,0.08);max-width:96%;width:980px}
+    .controls input[type=text]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid rgba(10,10,10,0.06);font-size:15px}
+    .controls button{padding:10px 14px;border-radius:8px;border:none;background:#111;color:#fff;font-weight:600;cursor:pointer}
+    .controls button.secondary{background:transparent;color:var(--accent);border:1px solid rgba(10,10,10,0.06)}
+    .attribution{position:fixed;right:18px;bottom:18px;color:#666;font-size:12px}
+
+    @media (max-width:760px){.controls{width:calc(100% - 36px);flex-direction:column;gap:8px}}
+  </style>
+</head>
+<body>
+  <div id="canvasHolder"></div>
+
+  <div class="controls" role="region" aria-label="AuraScript controls">
+    <input id="textInput" type="text" placeholder="Type some words here — hit Generate (e.g., "gentle moon river")" />
+    <button id="generateBtn">Generate</button>
+    <button id="saveBtn" class="secondary">Save PNG</button>
+  </div>
+
+  <div class="attribution">AuraScript • p5.js • Local</div>
+
+  <script src="sketch.js"></script>
+</body>
+</html>
