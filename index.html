@@ -25,16 +25,37 @@
   <header class="header-wrap"><div class="project-headline tracking-widest uppercase">AETHER</div></header>
 
   <main id="stage">
-    <div id="canvasHolder" class="rounded-xl p-6"></div>
+    <div id="canvasHolder" class="p-6"></div>
   </main>
 
   <div class="chat-card" role="search" aria-label="Chat input">
     <input id="chatInput" class="chat-input" type="search" placeholder="Send anything" />
+
+    <button id="clearBtn" class="clear-btn" aria-label="Clear input" type="button">
+      <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="#1F1F1F"/>
+      </svg>
+    </button>
+
     <button id="sendBtn" class="icon-btn send-btn" aria-label="Send message">
-      <span class="material-symbols-outlined" aria-hidden="true">send</span>
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_upward_alt</span>
     </button>
   </div>
 
   <script src="src/sketch.js"></script>
+
+  <script>
+    (function(){
+      const input = document.getElementById('chatInput');
+      const clearBtn = document.getElementById('clearBtn');
+      function updateClear(){
+        clearBtn.style.display = input.value ? 'inline-flex' : 'none';
+      }
+      clearBtn.addEventListener('click', ()=>{ input.value = ''; input.focus(); updateClear(); });
+      input.addEventListener('input', updateClear);
+      // init
+      updateClear();
+    })();
+  </script>
 </body>
 </html>
