@@ -9,8 +9,9 @@ const CONFIG = {
   particleAlpha: 0.05,
   backgroundHex: '#F2F0E9',
   vowelRegex: /[aeiouyаеёиоуыэюя]/giu,
-  labelSize: 12,
-  lineColor: [0,0,15,0.2], // H,S,L,alpha for stroke
+  labelSize: 14,
+  vertexDot: 10,
+  lineColor: [0,0,12,0.28], // H,S,L,alpha for stroke
 };
 
 // Canvas size derived from CSS variables to avoid hardcoding
@@ -138,12 +139,13 @@ function generateFromText(raw){
     // Color mapping HSL per spec
     const hue = map(firstVal, 0, 255, 0, 360);
     const len = rawWord.length;
-    const sat = constrain(len * 10, 40, 90);
+    const sat = constrain(len * 12, 45, 95);
     const vowels = (rawWord.match(CONFIG.vowelRegex) || []).length;
     const light = map(vowels, 0, 10, 40, 70);
 
-    // Particle count deterministic between CONFIG.particleMin..Max
-    const particleCount = CONFIG.particleMin + (sum % (CONFIG.particleMax - CONFIG.particleMin + 1));
+    // Particle count deterministic between CONFIG.particleMin..Max, biased by word length
+    const baseCount = Math.round(map(len, 1, 12, CONFIG.particleMin, CONFIG.particleMax));
+    const particleCount = constrain(baseCount + (sum % 41) - 20, CONFIG.particleMin, CONFIG.particleMax);
 
     // Save center
     centers.push({x,y, hue, sat, light});
@@ -156,8 +158,9 @@ function generateFromText(raw){
     for(let p=0;p<particleCount;p++){
       const gx = x + randomGaussian() * spread;
       const gy = y + randomGaussian() * spread;
-      const size = random(0.6, 6.0) * (spread * 0.02 + 1);
-      fill(hue, sat, light, CONFIG.particleAlpha);
+      const size = pow(random(), 1.6) * (spread * 0.035) + random(0.6, 12);
+      const alpha = CONFIG.particleAlpha * random(0.6, 1.2);
+      fill(hue, sat, light, alpha);
       ellipse(gx, gy, size, size * random(0.7,1.3));
     }
 
@@ -181,9 +184,10 @@ function generateFromText(raw){
   textAlign(CENTER, CENTER);
   for(let i=0;i<centers.length;i++){
     const c = centers[i];
-    ellipse(c.x, c.y, 6,6);
     fill(0,0,10,0.95);
-    text('#' + (i+1), c.x, c.y - 12);
+    ellipse(c.x, c.y, CONFIG.vertexDot, CONFIG.vertexDot);
+    fill(0,0,10,0.95);
+    text('#' + (i+1), c.x, c.y - (CONFIG.vertexDot + 6));
   }
   pop();
 
