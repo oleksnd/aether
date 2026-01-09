@@ -85,16 +85,15 @@ html,body{height:100%;margin:0;background:var(--aether-bg);font-family:Inter,sys
 .aether-panel{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--panel-bottom);display:none;align-items:center;gap:var(--panel-gap);padding:var(--panel-padding);border-radius:var(--panel-radius);background:var(--card-bg);border:var(--border-width) solid var(--glass-border);box-shadow:var(--panel-shadow);width:min(var(--panel-max-width),calc(100% - var(--panel-offset)));}
 
 /* Compact chat-style input (matches screenshot; we remove controls we don't have) */
-.chat-card{position:fixed;left:50%;transform:translateX(-50%);bottom:var(--panel-bottom);display:flex;align-items:center;gap:var(--panel-gap);padding:var(--panel-padding);border-radius:var(--panel-radius);background:var(--card-bg);border:var(--border-width) solid rgba(16,24,40,0.04);box-shadow:var(--panel-shadow);width:min(var(--panel-max-width),calc(100% - var(--panel-offset)));}
-.icon-btn{width:calc(2.2 * var(--icon-size));height:calc(2.2 * var(--icon-size));border-radius:var(--btn-radius);border:var(--border-width) solid rgba(16,24,40,0.06);display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--card-bg),var(--input-bg));cursor:pointer}
-.icon-btn .material-symbols-outlined{font-size:calc(0.9 * var(--icon-size));}
+.chat-card{position:fixed;left:50%;transform:translateX(-50%);bottom:2rem;display:flex;align-items:flex-end;gap:0.5rem;padding:0.75rem;border-radius:2rem;background:var(--card-bg);border:1px solid rgba(0,0,0,0.08);box-shadow:0 8px 30px rgba(0,0,0,0.06);width:min(720px,calc(100% - 2rem));}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:none;display:inline-flex;align-items:center;justify-content:center;background:transparent;cursor:pointer;transition:transform 0.1s, background 0.2s}
+.icon-btn .material-symbols-outlined{font-size:20px}
 
 /* Primary send button (black, same visual weight as other icon buttons) */
-.send-btn{background:var(--btn-bg);color:var(--btn-foreground);border:none;box-shadow:var(--btn-hover-shadow);display:inline-flex;align-items:center;justify-content:center}
-.send-btn .material-symbols-outlined{color:var(--btn-foreground);font-size:calc(0.9 * var(--icon-size));}
-.send-btn:hover{transform:translateY(var(--btn-hover-translate));box-shadow:var(--btn-hover-shadow)}
+.send-btn{background:var(--btn-bg);color:var(--btn-foreground);border-radius:1.2rem;width:2.8rem;height:2.8rem;flex-shrink:0}
+.send-btn:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
 
-.chat-input{flex:1;border:none;background:transparent;font-size:1.02rem;padding-left:var(--input-left-padding);padding-right:var(--input-right-padding);color:var(--accent);min-width:20ch}
+.chat-input{flex:1;border:none;background:transparent;font-size:1rem;line-height:1.5;padding:0.6rem 0.2rem;color:#111;min-width:20ch;max-height:160px;resize:none;margin-bottom:0.1rem}
 .chat-input::placeholder{color:var(--muted);opacity:0.9}
 /* Remove focus outline on text input as requested */
 .chat-input:focus{outline:none;box-shadow:none}
