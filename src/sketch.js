@@ -1,10 +1,21 @@
 /* Aether — sketch.js
-   Pure p5.js implementation: text -> watercolor + mesh
+  Pure p5.js implementation: text -> watercolor + mesh
 */
+
+// Configuration object (centralized parameters)
+const CONFIG = {
+  particleMin: 800,
+  particleMax: 1000,
+  particleAlpha: 0.05,
+  backgroundHex: '#F2F0E9',
+  vowelRegex: /[aeiouyаеёиоуыэюя]/giu,
+  labelSize: 12,
+  lineColor: [0,0,15,0.2], // H,S,L,alpha for stroke
+};
 
 // Canvas size derived from CSS variables to avoid hardcoding
 let canvasW, canvasH;
-let inputEl, sendBtn;
+let inputEl, generateBtn, clearBtn;
 let paperTexture; // p5.Graphics for background texture
 let lastArtwork = [];
 
@@ -24,60 +35,46 @@ function setup(){
   colorMode(HSL, 360, 100, 100, 1);
   noLoop();
 
-  // UI hooks
-  inputEl = document.getElementById('chatInput');
-  sendBtn = document.getElementById('sendBtn');
-
-  // Backwards-compatible fallback (if textarea still present in older versions)
-  if(!inputEl) inputEl = document.getElementById('textInput');
+  // UI hooks: prefer textarea `textInput` and `generateBtn`
+  inputEl = document.getElementById('textInput');
+  generateBtn = document.getElementById('generateBtn');
+  clearBtn = document.getElementById('clearBtn');
 
   if(inputEl){
-    if(inputEl.tagName.toLowerCase() === 'textarea'){
-      // Auto-resize textarea (chat-like)
-      function autoResize(){
-        const maxHraw = getComputedStyle(document.documentElement).getPropertyValue('--input-max-height') || '220px';
-        const maxH = parseInt(maxHraw.replace('px',''), 10) || 220;
-        inputEl.style.height = 'auto';
-        inputEl.style.height = Math.min(inputEl.scrollHeight, maxH) + 'px';
-      }
-      inputEl.addEventListener('input', autoResize);
-      setTimeout(autoResize, 0);
-
-      // Ctrl/Cmd+Enter to submit (Enter alone inserts newline)
-      inputEl.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
-          e.preventDefault();
-          generateFromText(inputEl.value || inputEl.placeholder);
-        }
-      });
-    } else {
-      // Single-line input: Enter submits immediately
-      inputEl.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter'){
-          e.preventDefault();
-          generateFromText(inputEl.value || inputEl.placeholder);
-        }
-      });
+    // Auto-resize textarea
+    function autoResize(){
+      const maxHraw = getComputedStyle(document.documentElement).getPropertyValue('--input-max-height') || '220px';
+      const maxH = parseInt(maxHraw.replace('px',''), 10) || 220;
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, maxH) + 'px';
     }
+    inputEl.addEventListener('input', autoResize);
+    setTimeout(autoResize, 0);
   }
 
-  // Hook up send button
-  if(sendBtn){
-    sendBtn.addEventListener('click', () => generateFromText(inputEl.value || inputEl.placeholder));
+  if(clearBtn){
+    clearBtn.addEventListener('click', ()=>{ if(inputEl){ inputEl.value = ''; inputEl.focus(); } });
+  }
+
+  // Only generate on explicit button click for deterministic redraws
+  if(generateBtn && inputEl){
+    generateBtn.addEventListener('click', ()=> generateFromText(inputEl.value || inputEl.placeholder || ''));
   }
 
   // create paper texture once
   paperTexture = createGraphics(width, height);
   drawPaperTexture(paperTexture);
 
-  // initial sample
-  inputEl.value = "gentle moon river drifting light";
-  generateFromText(inputEl.value);
+  // optional initial sample (do not auto-generate if no input field)
+  if(inputEl){
+    inputEl.value = "gentle moon river drifting light";
+    // do not auto-generate; keep noLoop() - user must press Generate
+  }
 }
 
 function drawPaperTexture(g){
   g.clear();
-  g.background(7, 2, 96); // subtle off-white using HSL
+  g.background(CONFIG.backgroundHex);
   g.noStroke();
 
   // Add faint grain/noise
@@ -107,17 +104,15 @@ function generateFromText(raw){
   // Preprocess input: split into words, remove surrounding punctuation
   const words = (raw || '').match(/[^\s]+/g) || [];
   if(words.length === 0) return;
-
   // Prepare canvas
   clearCanvas();
   lastArtwork = [];
 
-  // Compute global char bounds for better normalization
-  let charCodes = [];
-  for(const w of words){ for(const c of w){ charCodes.push(c.codePointAt(0)); }}
-  let minC = Math.min(...charCodes), maxC = Math.max(...charCodes);
-  minC = Math.max(minC, 32); // guard
-  maxC = Math.min(maxC, 0x10FFFF);
+  // Deterministic seed derived from raw string so results are repeatable
+  let seed = 0;
+  for(let i=0;i<raw.length;i++) seed = ((seed * 31) + raw.charCodeAt(i)) >>> 0;
+  randomSeed(seed);
+  noiseSeed(seed);
 
   // Draw word clusters and collect centers
   let centers = [];
@@ -127,36 +122,31 @@ function generateFromText(raw){
     if(!rawWord) continue;
     const firstChar = rawWord[0];
     const lastChar = rawWord[rawWord.length-1];
-    const firstVal = firstChar.codePointAt(0);
-    const lastVal = lastChar.codePointAt(0);
+    const firstVal = (firstChar && firstChar.codePointAt(0)) ? firstChar.codePointAt(0) % 256 : 0;
+    const lastVal = (lastChar && lastChar.codePointAt(0)) ? lastChar.codePointAt(0) % 256 : 0;
 
     // Word sum
     let sum = 0; for(const c of rawWord) sum += c.codePointAt(0);
 
-    // Map first char -> X (left-right), last char -> Y (top-bottom)
-    const rootStyles = getComputedStyle(document.documentElement);
-    const marginPx = parseInt((rootStyles.getPropertyValue('--canvas-margin') || '60px').trim().replace('px',''), 10);
-    const margin = marginPx || 60;
-    const x = map(firstVal, minC, maxC, margin, width - margin);
-    const y = map(lastVal, minC, maxC, margin, height - margin);
+    // Map first char -> X (left-right), last char -> Y (top-bottom) per spec
+    const x = map(firstVal, 0, 255, width * 0.1, width * 0.9);
+    const y = map(lastVal, 0, 255, height * 0.1, height * 0.9);
 
-    // Spread based on sum (bigger sum = more spread)
-    const spread = constrain(map(sum % 1024, 0, 1023, 8, 180), 6, 220);
+    // Spread based on total ascii sum / 10
+    const spread = sum / 10;
 
-    // Color mapping HSL
-    const hue = (firstVal % 360 + 360) % 360; // hue 0-360
+    // Color mapping HSL per spec
+    const hue = map(firstVal, 0, 255, 0, 360);
     const len = rawWord.length;
-    // Saturation: shorter -> more pastel (lower sat), longer -> more vibrant
-    const sat = constrain(map(len, 1, 12, 28, 84), 18, 92);
-    // Lightness: based on vowel count -> variation in depth
-    const vowels = (rawWord.match(/[aeiouyаеёиоуыэюя]/giu) || []).length;
-    const light = constrain(map(vowels, 0, Math.max(1,len), 40, 82), 28, 88);
+    const sat = constrain(len * 10, 40, 90);
+    const vowels = (rawWord.match(CONFIG.vowelRegex) || []).length;
+    const light = map(vowels, 0, 10, 40, 70);
 
-    // Number of particles relative to spread
-    const particleCount = Math.round(map(spread, 6, 180, 180, 700));
+    // Particle count deterministic between CONFIG.particleMin..Max
+    const particleCount = CONFIG.particleMin + (sum % (CONFIG.particleMax - CONFIG.particleMin + 1));
 
     // Save center
-    centers.push({x,y});
+    centers.push({x,y, hue, sat, light});
 
     // Draw cluster: many semi-transparent ellipses with randomGaussian offsets
     push();
@@ -164,53 +154,39 @@ function generateFromText(raw){
     noStroke();
 
     for(let p=0;p<particleCount;p++){
-      // Slight skew based on word index to create rhythm
-      const gx = x + randomGaussian() * spread + random(-spread*0.08, spread*0.08);
-      const gy = y + randomGaussian() * spread + random(-spread*0.08, spread*0.08);
-
-      // size varies; fewer large blobs, many small ones
-      const size = pow(random(), 2) * (spread * 0.14) + random(1.2, 18);
-
-      // Alpha small to build watercolor accumulations
-      const alpha = random(0.02, 0.08);
-      fill(hue, sat, light, alpha);
-      ellipse(gx, gy, size, size * random(0.6,1.4));
-    }
-
-    // Slight central highlight/dark spot to suggest pigment pooling
-    for(let h=0; h<6; h++){
-      const hx = x + randomGaussian() * spread * 0.25;
-      const hy = y + randomGaussian() * spread * 0.25;
-      const hsize = random(6, Math.max(6, spread * 0.18));
-      fill(hue, max(10, sat-6), max(12, light-18), 0.08);
-      ellipse(hx,hy,hsize,hsize*random(0.6,1.2));
+      const gx = x + randomGaussian() * spread;
+      const gy = y + randomGaussian() * spread;
+      const size = random(0.6, 6.0) * (spread * 0.02 + 1);
+      fill(hue, sat, light, CONFIG.particleAlpha);
+      ellipse(gx, gy, size, size * random(0.7,1.3));
     }
 
     pop();
   }
 
-  // Draw structural links (thin elegant lines) connecting consecutive centers
+  // Draw mesh: thin lines connecting consecutive centers and small labeled dots
   push();
   strokeWeight(1);
+  stroke(CONFIG.lineColor[0], CONFIG.lineColor[1], CONFIG.lineColor[2], CONFIG.lineColor[3]);
+  noFill();
   for(let k=0;k<centers.length-1;k++){
     const a = centers[k], b = centers[k+1];
-    // Draw a faint graceful curve to feel organic
-    push();
-    stroke(220, 20, 18, 0.12); // HSL with alpha low
-    noFill();
-    // slight midpoint offset
-    const mx = (a.x + b.x)/2 + random(-26,26);
-    const my = (a.y + b.y)/2 + random(-18,18);
-    // use quadratic curve
-    beginShape();
-    vertex(a.x, a.y);
-    quadraticVertex(mx, my, b.x, b.y);
-    endShape();
-    pop();
+    line(a.x, a.y, b.x, b.y);
+  }
+
+  // draw vertices with index labels
+  fill(0,0,10,0.9);
+  noStroke();
+  textSize(CONFIG.labelSize);
+  textAlign(CENTER, CENTER);
+  for(let i=0;i<centers.length;i++){
+    const c = centers[i];
+    ellipse(c.x, c.y, 6,6);
+    fill(0,0,10,0.95);
+    text('#' + (i+1), c.x, c.y - 12);
   }
   pop();
 
-  // Save last centers if needed
   lastArtwork = centers;
 }
 
