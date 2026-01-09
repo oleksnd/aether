@@ -1,14 +1,21 @@
-/* AuraScript — sketch.js
+/* Aether — sketch.js
    Pure p5.js implementation: text -> watercolor + mesh
 */
 
-let canvasW = 1200;
-let canvasH = 800;
-let inputEl, generateBtn, saveBtn;
+// Canvas size derived from CSS variables to avoid hardcoding
+let canvasW, canvasH;
+let inputEl, generateBtn;
 let paperTexture; // p5.Graphics for background texture
 let lastArtwork = [];
 
 function setup(){
+  // read canvas size from CSS variables
+  const rootStyles = getComputedStyle(document.documentElement);
+  const cw = rootStyles.getPropertyValue('--canvas-width').trim() || '1200px';
+  const ch = rootStyles.getPropertyValue('--canvas-height').trim() || '800px';
+  canvasW = parseInt(cw.replace('px',''), 10);
+  canvasH = parseInt(ch.replace('px',''), 10);
+
   const cnv = createCanvas(canvasW, canvasH);
   cnv.parent('canvasHolder');
   pixelDensity(1);
@@ -18,13 +25,28 @@ function setup(){
   noLoop();
 
   // UI hooks
-  inputEl = document.getElementById('textInput');
+  inputEl = document.getElementById('textInput'); // now a textarea
   generateBtn = document.getElementById('generateBtn');
-  saveBtn = document.getElementById('saveBtn');
+
+  // Auto-resize textarea (chat-like)
+  function autoResize(){
+    const maxHraw = getComputedStyle(document.documentElement).getPropertyValue('--input-max-height') || '220px';
+    const maxH = parseInt(maxHraw.replace('px',''), 10) || 220;
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, maxH) + 'px';
+  }
+  inputEl.addEventListener('input', autoResize);
+  setTimeout(autoResize, 0);
+
+  // Ctrl/Cmd+Enter to submit (Enter alone inserts newline)
+  inputEl.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+      e.preventDefault();
+      generateFromText(inputEl.value || inputEl.placeholder);
+    }
+  });
 
   generateBtn.addEventListener('click', () => generateFromText(inputEl.value || inputEl.placeholder));
-  saveBtn.addEventListener('click', saveArtwork);
-  inputEl.addEventListener('keydown', (e) => { if(e.key === 'Enter') generateFromText(inputEl.value || inputEl.placeholder); });
 
   // create paper texture once
   paperTexture = createGraphics(width, height);
@@ -94,7 +116,9 @@ function generateFromText(raw){
     let sum = 0; for(const c of rawWord) sum += c.codePointAt(0);
 
     // Map first char -> X (left-right), last char -> Y (top-bottom)
-    const margin = 60;
+    const rootStyles = getComputedStyle(document.documentElement);
+    const marginPx = parseInt((rootStyles.getPropertyValue('--canvas-margin') || '60px').trim().replace('px',''), 10);
+    const margin = marginPx || 60;
     const x = map(firstVal, minC, maxC, margin, width - margin);
     const y = map(lastVal, minC, maxC, margin, height - margin);
 
