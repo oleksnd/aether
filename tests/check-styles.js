@@ -12,15 +12,15 @@ let errors = [];
 // helper to read file relative to repo root
 const SRC = path.join(__dirname, '..', 'src');
 
-// 1) Check index.html for inline style attributes
-const indexPath = path.join(SRC, 'index.html');
+// 1) Check root index.html for inline style attributes
+const indexPath = path.join(__dirname, '..', 'index.html');
 if(!fs.existsSync(indexPath)){
-  errors.push('src/index.html not found');
+  errors.push('index.html not found');
 } else {
   const indexSrc = fs.readFileSync(indexPath, 'utf8');
   const styleAttrRegex = /\sstyle\s*=\s*"[^"]*"/i;
   if(styleAttrRegex.test(indexSrc)){
-    errors.push('Inline style attributes found in src/index.html. All styles must be in src/style.css');
+    errors.push('Inline style attributes found in index.html. All styles must be in src/style.css');
   }
 }
 

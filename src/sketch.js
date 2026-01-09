@@ -4,7 +4,7 @@
 
 // Canvas size derived from CSS variables to avoid hardcoding
 let canvasW, canvasH;
-let inputEl, generateBtn;
+let inputEl, sendBtn;
 let paperTexture; // p5.Graphics for background texture
 let lastArtwork = [];
 
@@ -26,7 +26,7 @@ function setup(){
 
   // UI hooks
   inputEl = document.getElementById('chatInput');
-  generateBtn = document.getElementById('generateBtn');
+  sendBtn = document.getElementById('sendBtn');
 
   // Backwards-compatible fallback (if textarea still present in older versions)
   if(!inputEl) inputEl = document.getElementById('textInput');
@@ -61,7 +61,10 @@ function setup(){
     }
   }
 
-  generateBtn.addEventListener('click', () => generateFromText(inputEl.value || inputEl.placeholder));
+  // Hook up send button
+  if(sendBtn){
+    sendBtn.addEventListener('click', () => generateFromText(inputEl.value || inputEl.placeholder));
+  }
 
   // create paper texture once
   paperTexture = createGraphics(width, height);
