@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AETHER - Sequential Watercolor Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://unpkg.com/p5.brush@1.0.3/dist/p5.brush.min.js"></script>
+    <script src="https://unpkg.com/p5.palette@1.0.1/dist/p5.palette.min.js"></script>
+    <!-- Material Symbols for minimal export icon -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <style>
         body {
             margin: 0;
@@ -66,7 +70,6 @@
         }
         button {
             display: block;
-            margin-top: 10px;
             padding: 10px 20px;
             border: none;
             background: rgba(0,0,0,0.1);
@@ -78,21 +81,69 @@
         button:hover {
             background: rgba(0,0,0,0.2);
         }
+
+        /* Export icon button (top-right) - ICON ONLY */
+        #export-btn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 36px;
+            height: 36px;
+            padding: 6px;
+            border-radius: 6px;
+            border: none;
+            background: transparent; /* icon-only: no white background */
+            box-shadow: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 50;
+        }
+        #export-btn:hover { background: rgba(0,0,0,0.04); }
+
+        /* Global Material Symbols settings */
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            line-height: 1;
+        }
+
+        /* Icon styling: outlined save symbol */
+        #export-btn .material-symbols-outlined {
+            font-size: 20px;
+            color: #838384;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+        }
+
+        .example-btn { margin-right:8px; padding:6px 10px; font-size:13px; background:rgba(255,255,255,0.9); border-radius:6px; border:none; cursor:pointer; }
+        .example-btn:hover { background:rgba(255,255,255,1); }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
     <div id="ui">
         <img id="logo" src="assets/logo.svg" alt="Logo">
+        <!-- Export icon (Material Symbol) -->
+        <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined" aria-hidden="true">save</span></button>
+
         <div id="input-container">
             <textarea id="text-input">Pain is inevitable. Suffering is optional</textarea>
-            <button id="generate-btn">Generate</button>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button id="generate-btn">Generate</button>
+            </div>
         </div>
     </div>
     <script src="sketch.js"></script>
     <script>
         document.getElementById('generate-btn').addEventListener('click', () => {
             window.startGeneration(document.getElementById('text-input').value);
+        });
+        document.getElementById('export-btn').addEventListener('click', () => {
+            if (typeof window.exportPNG === 'function') window.exportPNG();
         });
     </script>
 </body>
