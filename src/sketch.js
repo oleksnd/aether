@@ -243,23 +243,23 @@ function generateFromText(raw){
     // Word sum
     let sum = 0; for(const c of rawWord) sum += c.codePointAt(0);
 
-    // Big Bang cubic mapping to compute reserved coordinates
-    const normX = (firstVal - minChar) / (maxChar - minChar);
-    const pushedX = pow((normX - 0.5) * 2, 3);
-    const x = map(pushedX, -1, 1, width * 0.05, width * 0.95);
-
-    const normY = (lastVal - minChar) / (maxChar - minChar);
-    const pushedY = pow((normY - 0.5) * 2, 3);
-    const y = map(pushedY, -1, 1, height * 0.05, height * 0.95);
-
-    // Spread based on total ascii sum / constant
-    const spread = Math.max(sum / 12, 6);
-
-    // Hash-based hue and golden ratio offset
+    // Hash-based hue and golden-ratio offset (compute hash first for deterministic placement)
     let hval = 5381;
     for(const ch2 of rawWord){ hval = ((hval << 5) + hval) + ch2.codePointAt(0); }
     const baseHue = Math.abs(hval) % 360;
     const hue = (baseHue + (i * 137.5)) % 360;
+
+    // Place job centers around canvas center using Perlin noise (more even, centered distribution)
+    const cx = width * 0.5;
+    const cy = height * 0.5;
+    // derive two noise seeds from the word hash so placement is deterministic
+    const nx = noise(Math.abs(hval) * 0.00013 + i * 0.1);
+    const ny = noise(Math.abs(hval) * 0.00029 + i * 0.13 + 97);
+    const x = cx + map(nx, 0, 1, -width * 0.38, width * 0.38);
+    const y = cy + map(ny, 0, 1, -height * 0.38, height * 0.38);
+
+    // Spread based on total ascii sum / constant
+    const spread = Math.max(sum / 12, 6);
 
     // Shape DNA: unique geometric distribution per word
     const shapeType = Math.abs(hval) % 4;
@@ -276,17 +276,18 @@ function generateFromText(raw){
     const bodyTotal = constrain(len * 600, 3000, 12000); // increased body density for blobs
     const splatterTotal = Math.round(random(80, 200)); // accents only
 
-    // reserve box size
-    const boxSize = Math.max(160, spread * 6);
+    // reserve box size (increase to allow blobs to spread across canvas)
+    const boxSize = Math.max(240, spread * 8);
 
     // sub-centers for organic blobs (3-5 per word), deterministic from hval
     const subCount = 3 + (Math.abs(hval) % 3); // 3..5
     const subCenters = [];
+    // place sub-centers across the reserved box (more spread, not just tiny offsets)
     for(let k=0;k<subCount;k++){
       const ph = ((Math.abs(hval) + (k * 2654435761)) >>> 0);
       const ang = (ph % 360) * (PI / 180);
       const frac = ((ph >>> 8) % 100) / 100;
-      const dist = frac * spread * 1.5; // up to 1.5x spread
+      const dist = frac * (boxSize / 2); // up to half the box size
       subCenters.push({ x: x + Math.cos(ang) * dist, y: y + Math.sin(ang) * dist });
     }
 
@@ -434,82 +435,87 @@ function draw(){
     while (remaining > 0) {
       // Layer 1 (Base): Large, sparse drops. size = random(10, 25). Alpha very low (0.08).
       if (job.washDone < job.washTotal) {
-        // pick one of the sub-centers as origin
+        // noise-radial sampling to break circular symmetry: sample around a sub-center
         const origin = job.subCenters && job.subCenters.length ? random(job.subCenters) : {x: job.x, y: job.y};
-        // base position with slight Gaussian
-        const bx = origin.x + randomGaussian() * job.spread * 0.7;
-        const by = origin.y + randomGaussian() * job.spread * 0.7;
-        // noise displacement for irregular smears
-        const noiseX = noise(bx * 0.01, by * 0.01, job.id);
-        const noiseY = noise(bx * 0.01 + 100, by * 0.01 + 100, job.id);
-        const gx = bx + map(noiseX, 0, 1, -job.spread * 1.5, job.spread * 1.5);
-        const gy = by + map(noiseY, 0, 1, -job.spread * 1.5, job.spread * 1.5);
-        // stretched, rotated brushstroke
-        const angle = random(TWO_PI);
-        const w = job.spread * 2 * random(0.8, 1.3) * 0.4;
-        const h = w * random(2.0, 4.0);
-        artLayer.push();
-        artLayer.translate(gx, gy);
-        artLayer.rotate(angle);
-        artLayer.noStroke();
-        artLayer.fill(job.hue, job.sat, job.light, 0.05);
-        artLayer.ellipse(0, 0, w, h);
-        artLayer.pop();
+        const angBase = random(TWO_PI);
+        const angNoise = noise(origin.x * 0.01, origin.y * 0.01, job.id * 5);
+        const ang = angBase + (angNoise - 0.5) * PI;
+        const rNoise = noise(origin.x * 0.02 + 11, origin.y * 0.02 + 7, job.id * 3);
+        const radius = (job.boxSize / 2) * pow(random(), 0.6) * map(rNoise, 0, 1, 0.35, 1.05);
+        const bx = origin.x + Math.cos(ang) * radius;
+        const by = origin.y + Math.sin(ang) * radius;
+        // Perlin warp to create wavy displacement
+        const warp = noise(bx * 0.008, by * 0.008, job.id * 13);
+        const gx = bx + map(warp, 0, 1, -job.spread * 0.9, job.spread * 0.9);
+        const gy = by + map(noise(bx * 0.008 + 77, by * 0.008 + 77, job.id * 13), 0, 1, -job.spread * 0.9, job.spread * 0.9);
+        // draw multiple micro-dots with noise offsets to create a ragged blot
+        const size = random(8, 34);
+        const dots = Math.round(random(10, 28));
+        for(let d=0; d<dots; d++){
+          const n1 = noise(bx*0.03 + d*2.1, by*0.03 + d*3.7, job.id*2 + d);
+          const offx = map(n1,0,1,-size*0.7,size*0.7) + randomGaussian()*size*0.03;
+          const offy = map(noise(bx*0.03 + d*1.9, by*0.03 + d*2.5, job.id*4 + d),0,1,-size*0.7,size*0.7) + randomGaussian()*size*0.03;
+          const s = size * random(0.12,0.55);
+          artLayer.noStroke();
+          artLayer.fill(job.hue, job.sat, job.light, 0.05 * random(0.8,1.1));
+          artLayer.ellipse(gx + offx, gy + offy, s * random(0.8,1.2), s * random(0.8,1.2));
+        }
         nozzleX = gx; nozzleY = gy;
         job.washDone++; remaining--; continue;
       }
 
       // Layer 2 (Body - The Main Fill): MASSIVE density of medium dots. size = random(3, 12). Alpha medium (0.15).
       if (job.bodyDone < job.bodyTotal) {
-        // pick a sub-center for this particle
+        // denser noise-driven clustering: sample around random sub-center with noise-radial mapping
         const origin = job.subCenters && job.subCenters.length ? random(job.subCenters) : {x: job.x, y: job.y};
-        // base position
-        const bx = origin.x + randomGaussian() * job.spread * 0.7;
-        const by = origin.y + randomGaussian() * job.spread * 0.7;
-        // noise displacement
-        const noiseX = noise(bx * 0.01, by * 0.01, job.id);
-        const noiseY = noise(bx * 0.01 + 100, by * 0.01 + 100, job.id);
-        const gx = bx + map(noiseX, 0, 1, -job.spread * 1.5, job.spread * 1.5);
-        const gy = by + map(noiseY, 0, 1, -job.spread * 1.5, job.spread * 1.5);
-        // stretched brushstroke
-        const angle = random(TWO_PI);
-        const size = random(3, 12);
-        const w = size * 0.4;
-        const h = size * random(2.0, 4.0);
-        artLayer.push();
-        artLayer.translate(gx, gy);
-        artLayer.rotate(angle);
-        artLayer.noStroke();
-        artLayer.fill(job.hue, job.sat, job.light, 0.15);
-        artLayer.ellipse(0, 0, w, h);
-        artLayer.pop();
+        const angBase = random(TWO_PI);
+        const angNoise = noise(origin.x * 0.012, origin.y * 0.012, job.id * 6);
+        const ang = angBase + (angNoise - 0.5) * PI;
+        const rNoise = noise(origin.x * 0.018 + 13, origin.y * 0.018 + 9, job.id * 5);
+        const radius = (job.boxSize / 2) * pow(random(), 0.45) * map(rNoise, 0, 1, 0.25, 0.95);
+        const bx = origin.x + Math.cos(ang) * radius;
+        const by = origin.y + Math.sin(ang) * radius;
+        const warp = noise(bx * 0.009, by * 0.009, job.id * 11);
+        const gx = bx + map(warp, 0, 1, -job.spread * 0.5, job.spread * 0.5);
+        const gy = by + map(noise(bx * 0.009 + 44, by * 0.009 + 44, job.id * 11), 0, 1, -job.spread * 0.5, job.spread * 0.5);
+        // draw multiple micro-dots to create textured blot
+        const size = random(2.5, 16) * (1 + rNoise * 0.25);
+        const dots = Math.round(random(6, 18));
+        for(let d=0; d<dots; d++){
+          const n1 = noise(bx*0.035 + d*1.7, by*0.035 + d*2.9, job.id*3 + d);
+          const offx = map(n1,0,1,-size*0.5,size*0.5) + randomGaussian()*size*0.02;
+          const offy = map(noise(bx*0.035 + d*1.3, by*0.035 + d*1.9, job.id*2 + d),0,1,-size*0.5,size*0.5) + randomGaussian()*size*0.02;
+          const s = size * random(0.26, 0.8);
+          artLayer.noStroke();
+          artLayer.fill(job.hue, job.sat, job.light, 0.14 * random(0.85,1.05));
+          artLayer.ellipse(gx + offx, gy + offy, s * random(0.8,1.2), s * random(0.8,1.2));
+        }
         nozzleX = gx; nozzleY = gy;
         job.bodyDone++; remaining--; continue;
       }
 
       // Layer 3 (Accent Splatter): Tiny, sharp dots scattered wide. size = random(1, 4). Alpha high (0.6).
       if (job.splatterDone < job.splatterTotal) {
+        // light speckles: noise-driven points scattered to break circularity
         const origin = job.subCenters && job.subCenters.length ? random(job.subCenters) : {x: job.x, y: job.y};
-        // base position
-        const bx = origin.x + randomGaussian() * job.spread * 0.7;
-        const by = origin.y + randomGaussian() * job.spread * 0.7;
-        // noise displacement
-        const noiseX = noise(bx * 0.01, by * 0.01, job.id);
-        const noiseY = noise(bx * 0.01 + 100, by * 0.01 + 100, job.id);
-        const gx = bx + map(noiseX, 0, 1, -job.spread * 1.5, job.spread * 1.5);
-        const gy = by + map(noiseY, 0, 1, -job.spread * 1.5, job.spread * 1.5);
-        // stretched brushstroke
-        const angle = random(TWO_PI);
-        const size = random(1, 4);
-        const w = size * 0.4;
-        const h = size * random(2.0, 4.0);
-        artLayer.push();
-        artLayer.translate(gx, gy);
-        artLayer.rotate(angle);
-        artLayer.noStroke();
-        artLayer.fill(job.hue, job.sat, job.light, 0.6);
-        artLayer.ellipse(0, 0, w, h);
-        artLayer.pop();
+        const ang = random(TWO_PI) + (noise(origin.x*0.02, origin.y*0.02, job.id*9)-0.5)*PI;
+        const radius = (job.boxSize / 3) * Math.sqrt(random()) * map(noise(origin.x*0.02+3, origin.y*0.02+5, job.id*8),0,1,0.2,1.0);
+        const bx = origin.x + Math.cos(ang) * radius;
+        const by = origin.y + Math.sin(ang) * radius;
+        const warp = noise(bx*0.02, by*0.02, job.id*12);
+        const gx = bx + map(warp,0,1,-job.spread*0.35,job.spread*0.35);
+        const gy = by + map(noise(bx*0.02+21,by*0.02+21,job.id*12),0,1,-job.spread*0.35,job.spread*0.35);
+        const size = random(1, 7) * (1 + warp * 0.35);
+        const dots = Math.round(random(2,6));
+        for(let d=0; d<dots; d++){
+          const n1 = noise(bx*0.06 + d*2.2, by*0.06 + d*1.6, job.id*2 + d);
+          const offx = map(n1,0,1,-size*0.25,size*0.25) + randomGaussian()*size*0.01;
+          const offy = map(noise(bx*0.06 + d*1.4, by*0.06 + d*1.2, job.id*3 + d),0,1,-size*0.25,size*0.25) + randomGaussian()*size*0.01;
+          const s = size * random(0.4, 0.95);
+          artLayer.noStroke();
+          artLayer.fill(job.hue, job.sat, job.light, 0.55 * random(0.9,1.0));
+          artLayer.ellipse(gx + offx, gy + offy, s * random(0.8,1.2), s * random(0.8,1.2));
+        }
         nozzleX = gx; nozzleY = gy;
         job.splatterDone++; remaining--; continue;
       }
