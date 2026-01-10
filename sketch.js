@@ -14,32 +14,7 @@ let uiLayer;
 let paperLayer; // static paper texture
 let artLayer;   // persistent watercolor paint
 
-// Конфиг. Пастельная палитра. Никакого чистого чёрного в живом слое.
-const CONFIG = {
-  minRadius: 10,
-  maxRadius: 140,
-  moveSpeed: 0.12,
-  paintDuration: 90,
-  brushAlpha: 8, // очень низкая прозрачность
-  bleedIntensity: 0.25,
-
-  // Fast-mode: lower-fidelity but much faster rendering/animation
-  fastMode: true,
-  fast: {
-    moveSpeed: 0.28,
-    paintDuration: 30,
-    layersScale: 0.5,
-    ellipseCountScale: 0.6,
-    dropletFreqScale: 0.45
-  },
-
-  palette: [
-    '#CDECCF', // Mint
-    '#E9D6F4', // Lavender
-    '#F8C8DC', // Pale Rose
-    '#CFEAFD'  // Sky Blue
-  ]
-};
+let zoneWidth, zoneHeight;
 
 // Simple, deterministic string hash
 function cyrb53(str, seed = 0) {
@@ -54,9 +29,20 @@ function cyrb53(str, seed = 0) {
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 
+function initSettings() {
+  zoneWidth = width / GRID_CONFIG.COLS;
+  zoneHeight = height / GRID_CONFIG.ROWS;
+}
+
+function getLetterMapping(char) {
+  return ALPHABET_DNA[char];
+}
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
+
+  initSettings();
 
   // Layers: paperLayer (static), artLayer (persistent paint), uiLayer (cleared each frame)
   paperLayer = createGraphics(width, height);
@@ -183,75 +169,44 @@ function startGeneration(inputText = 'AETHER VOID SILENCE') {
   currentIndex = -1;
   state = 'IDLE';
 
-  // Parse words
-  let rawWords = inputText.trim().split(/\s+/).filter(Boolean);
-  if (rawWords.length === 0) rawWords = ['AETHER','VOID','SILENCE'];
+  // Input pre-processing: clean to only A-Z uppercase
+  let cleaned = inputText.toUpperCase().replace(/[^A-Z]/g, '');
+  if (cleaned.length === 0) cleaned = 'AETHERVOIDSILENCE';
+  let letters = cleaned.split('');
 
-  // Placement via deterministic formula from word characters (Unicode-aware).
-  // Each word becomes a visual 'rectangle' (puddle area). Formula uses:
-  // - sum of char codes, word length, and a fast hash `cyrb53` to derive angle, radius, orientation and color.
-  let minR = min(width, height) * 0.06;
-  let maxR = min(width, height) * 0.46;
+  for (let i = 0; i < letters.length; i++) {
+    let letter = letters[i];
+    let mapEntry = getLetterMapping(letter);
+    if (!mapEntry) continue;
 
-  // Placement: Golden Spiral / radial distribution for organic coverage
-  // Use a deterministic golden angle + seed offset so placement is stable per text.
-  const GOLDEN_ANGLE = PI * (3 - sqrt(5)); // ~2.399963229728653
-  let centerX = width / 2;
-  let centerY = height / 2;
-  // scale so that spiral covers most of the canvas without overlapping edges aggressively
-  maxR = min(width, height) * 0.42;
+    let zone = mapEntry.zoneIndex;
+    let col = zone % GRID_CONFIG.COLS;
+    let row = Math.floor(zone / GRID_CONFIG.COLS);
+    let x_min = col * zoneWidth;
+    let y_min = row * zoneHeight;
+    let margin = GRID_CONFIG.MARGIN;
+    let x = random(x_min + zoneWidth * margin, x_min + zoneWidth * (1 - margin));
+    let y = random(y_min + zoneHeight * margin, y_min + zoneHeight * (1 - margin));
 
-  for (let i = 0; i < rawWords.length; i++) {
-    let w = rawWords[i];
-    let seed = cyrb53(w + '|' + i);
-
-    // sum of Unicode codepoints and unicode-aware length
-    let sumCodes = 0;
-    for (let ch of w) sumCodes += ch.codePointAt(0) || 0;
-    let N = Array.from(w).length;
-
-    // golden spiral position with small seed jitter
-    let angle = (i * GOLDEN_ANGLE) + (seed % 360) * 0.008; // seed introduces variation without breaking spiral
-    let rnorm = sqrt(i + ((seed % 13) / 13)); // sqrt spacing feels organic
-    let radius = map(rnorm, 0, sqrt(max(1, rawWords.length)), min(width, height) * 0.04, maxR);
-
-    let x = centerX + radius * cos(angle) + map(noise(seed * 0.00017, i * 0.03), 0, 1, -24, 24);
-    let y = centerY + radius * sin(angle) + map(noise(seed * 0.00023, i * 0.035), 0, 1, -24, 24);
-
-    // size scales with word length, but limited to avoid overlap
-    let minSide = min(width, height) * 0.06;
-    let maxSide = min(width, height) * 0.38;
-    let normSize = constrain((N + (sumCodes % 9) / 9) / 14, 0, 1);
-    let side = lerp(minSide, maxSide, pow(normSize, 0.9)) * (0.9 + noise(seed * 0.0007) * 0.2);
-
-    // orientation roughly tangent to spiral for better composition
-    let orientation = degrees(angle + PI * 0.5) + map(noise(seed * 0.002), 0, 1, -20, 20);
-
-    // Pastel HSL color derived from seed + sum codes, constrained to soft tones
-    let hue = (seed % 360 + sumCodes) % 360;
-    let sat = lerp(18, 34, ((sumCodes % 97) / 97));
-    let light = lerp(74, 88, 1 - ((sumCodes % 103) / 103));
-    let alpha = constrain(0.025 + (N / 16) * 0.045, 0.02, 0.06);
-    let col = `hsla(${Math.floor(hue)}, ${Math.floor(sat)}%, ${Math.floor(light)}%, ${alpha})`;
+    let color = mapEntry.baseColor;
+    let orientation = random(0, 360);
+    let side = min(width, height) * 0.08;
 
     words.push({
-      text: w,
+      text: letter,
       x, y,
       orientation,
       width: side,
       height: side,
-      color: col,
+      color,
       baseSize: side,
-      seed,
-      sumCodes,
-      N
+      seed: cyrb53(letter + i),
     });
 
-    // Compute a trapezoid-shaped geometric boundary (relative coords) — top narrower than bottom
-    // Keep local coordinates to speed up per-frame transforms.
-    let topW = side * (0.76 + (Math.min(14, N) / 14) * 0.08);
-    let botW = side * (0.96 + (Math.min(14, N) / 14) * 0.18);
-    let hh = side * (0.6 + (Math.min(14, N) / 14) * 0.6);
+    // Compute trapezoid
+    let topW = side * (0.76 + (1 / 14) * 0.08);
+    let botW = side * (0.96 + (1 / 14) * 0.18);
+    let hh = side * (0.6 + (1 / 14) * 0.6);
     let polyRel = [
       { x: -topW * 0.5, y: -hh * 0.5 },
       { x: topW * 0.5, y: -hh * 0.5 },
@@ -259,27 +214,22 @@ function startGeneration(inputText = 'AETHER VOID SILENCE') {
       { x: -botW * 0.5, y: hh * 0.5 }
     ];
 
-    // Area -> determine number of iterations (frames) and droplets per iteration
     let area = (topW + botW) * 0.5 * hh;
     let minArea = pow(min(width, height) * 0.06, 2) * 0.5;
     let maxArea = pow(min(width, height) * 0.38, 2) * 1.2;
-
-    // iterations = frames over which the container is filled (100..200)
     let iterations = floor(map(constrain(area, minArea, maxArea), minArea, maxArea, 110, 190));
-    // droplets per iteration (5..15) deterministic by seed
-    let perIteration = 5 + (seed % 11); // 5..15
+    let perIteration = 5 + (cyrb53(letter + i) % 11);
 
-    // Attach computed geometry and inking state
     let wobj = words[words.length - 1];
-    wobj.polyRel = polyRel; // local polygon relative coords
+    wobj.polyRel = polyRel;
     wobj.iterTotal = iterations;
     wobj.iterDone = 0;
     wobj.perIteration = perIteration;
-    wobj.dropletsDeposited = 0; // total droplets for blending progress tracking
+    wobj.dropletsDeposited = 0;
 
-    // Precompute a small jitter table and droplet angles to avoid calling noise() many times per frame
     let preCount = 18;
     let jarr = [];
+    let seed = cyrb53(letter + i);
     for (let p = 0; p < preCount; p++) {
       jarr.push({
         jx: map(noise(seed * 0.001 + p, i * 0.01), 0, 1, -side * 0.18, side * 0.18),
@@ -492,6 +442,18 @@ function drawUI() {
     drawDashedLine(uiLayer, nozzle.x, nozzle.y, target.x, target.y);
   }
 
+  // Grid lines for debugging
+  uiLayer.stroke(100, 20);
+  uiLayer.strokeWeight(0.5);
+  for (let i = 1; i < GRID_CONFIG.COLS; i++) {
+    let x = i * zoneWidth;
+    uiLayer.line(x, 0, x, height);
+  }
+  for (let i = 1; i < GRID_CONFIG.ROWS; i++) {
+    let y = i * zoneHeight;
+    uiLayer.line(0, y, width, y);
+  }
+
   uiLayer.pop();
 }
 
@@ -577,35 +539,7 @@ function pointInPolygon(pt, poly) {
 // Prefer p5.palette when available; else use existing HSLA color and replace alpha, or pick from CONFIG.palette
 function usePaletteColor(w, alpha) {
   alpha = constrain(alpha, 0.0, 1.0);
-  // Prefer a palette library if available and deterministic
-  try {
-    if (typeof palette !== 'undefined' && palette) {
-      if (typeof palette.pick === 'function') {
-        let cstr = palette.pick(w.seed);
-        if (cstr) {
-          let c = color(cstr);
-          c.setAlpha(alpha * 255);
-          return c;
-        }
-      }
-      if (typeof palette.random === 'function') {
-        let cstr = palette.random();
-        let c = color(cstr);
-        c.setAlpha(alpha * 255);
-        return c;
-      }
-    }
-  } catch (e) {
-    // ignore and fallback
-  }
-
-  // Fallback: if stored color is hsla, replace alpha and return string; otherwise pick deterministic from CONFIG
-  if (typeof w.color === 'string' && w.color.startsWith('hsla')) {
-    return w.color.replace(/,\s*([0-9\.]+)\s*\)\s*$/, `, ${alpha})`);
-  }
-
-  let base = CONFIG.palette[w.seed % CONFIG.palette.length];
-  let c = color(base);
+  let c = color(w.color);
   c.setAlpha(alpha * 255);
   return c;
 }
@@ -639,6 +573,7 @@ window.exportPNG = exportPNG;
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  initSettings();
   paperLayer = createGraphics(windowWidth, windowHeight);
   artLayer = createGraphics(windowWidth, windowHeight);
   uiLayer = createGraphics(windowWidth, windowHeight);

@@ -5,11 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AETHER - Sequential Watercolor Generator</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
-    <script src="https://unpkg.com/p5.brush@1.0.3/dist/p5.brush.min.js"></script>
-    <script src="https://unpkg.com/p5.palette@1.0.1/dist/p5.palette.min.js"></script>
     <!-- Material Symbols for minimal export icon -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+        }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -137,6 +149,8 @@
             </div>
         </div>
     </div>
+    <script src="dna.js"></script>
+    <script src="constants.js"></script>
     <script src="sketch.js"></script>
     <script>
         document.getElementById('generate-btn').addEventListener('click', () => {
