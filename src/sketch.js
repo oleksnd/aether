@@ -370,7 +370,7 @@ function saveArtwork(){
 function clamp(v, a, b){return Math.max(a, Math.min(b, v));}
 
 /* PRINT speed in particles per frame (configurable) */
-CONFIG.printSpeed = CONFIG.particlesPerFrame;
+CONFIG.printSpeed = 8; // Each "particle" is now a full blob/wash
 
 /* For completeness, allow resizing to keep ratio but not required by spec */
 function windowResized(){
@@ -426,105 +426,17 @@ function draw(){
   drawReservedBox(job, true);
 
   // perform printing based on stage (scan -> ink -> move)
+
   if (job.stage === 'scan') {
     job.pauseCounter--;
     if (job.pauseCounter <= 0) job.stage = 'ink';
   } else if (job.stage === 'ink') {
-    // add particles slowly into the job.box (particles drop into center)
-    let remaining = CONFIG.printSpeed;
-    while (remaining > 0) {
-      // Layer 1 (Base): Large, sparse drops. size = random(10, 25). Alpha very low (0.08).
-      if (job.washDone < job.washTotal) {
-        // noise-radial sampling to break circular symmetry: sample around a sub-center
-        const origin = job.subCenters && job.subCenters.length ? random(job.subCenters) : {x: job.x, y: job.y};
-        const angBase = random(TWO_PI);
-        const angNoise = noise(origin.x * 0.01, origin.y * 0.01, job.id * 5);
-        const ang = angBase + (angNoise - 0.5) * PI;
-        const rNoise = noise(origin.x * 0.02 + 11, origin.y * 0.02 + 7, job.id * 3);
-        const radius = (job.boxSize / 2) * pow(random(), 0.6) * map(rNoise, 0, 1, 0.35, 1.05);
-        const bx = origin.x + Math.cos(ang) * radius;
-        const by = origin.y + Math.sin(ang) * radius;
-        // Perlin warp to create wavy displacement
-        const warp = noise(bx * 0.008, by * 0.008, job.id * 13);
-        const gx = bx + map(warp, 0, 1, -job.spread * 0.9, job.spread * 0.9);
-        const gy = by + map(noise(bx * 0.008 + 77, by * 0.008 + 77, job.id * 13), 0, 1, -job.spread * 0.9, job.spread * 0.9);
-        // draw multiple micro-dots with noise offsets to create a ragged blot
-        const size = random(8, 34);
-        const dots = Math.round(random(10, 28));
-        for(let d=0; d<dots; d++){
-          const n1 = noise(bx*0.03 + d*2.1, by*0.03 + d*3.7, job.id*2 + d);
-          const offx = map(n1,0,1,-size*0.7,size*0.7) + randomGaussian()*size*0.03;
-          const offy = map(noise(bx*0.03 + d*1.9, by*0.03 + d*2.5, job.id*4 + d),0,1,-size*0.7,size*0.7) + randomGaussian()*size*0.03;
-          const s = size * random(0.12,0.55);
-          artLayer.noStroke();
-          artLayer.fill(job.hue, job.sat, job.light, 0.05 * random(0.8,1.1));
-          artLayer.ellipse(gx + offx, gy + offy, s * random(0.8,1.2), s * random(0.8,1.2));
-        }
-        nozzleX = gx; nozzleY = gy;
-        job.washDone++; remaining--; continue;
-      }
-
-      // Layer 2 (Body - The Main Fill): MASSIVE density of medium dots. size = random(3, 12). Alpha medium (0.15).
-      if (job.bodyDone < job.bodyTotal) {
-        // denser noise-driven clustering: sample around random sub-center with noise-radial mapping
-        const origin = job.subCenters && job.subCenters.length ? random(job.subCenters) : {x: job.x, y: job.y};
-        const angBase = random(TWO_PI);
-        const angNoise = noise(origin.x * 0.012, origin.y * 0.012, job.id * 6);
-        const ang = angBase + (angNoise - 0.5) * PI;
-        const rNoise = noise(origin.x * 0.018 + 13, origin.y * 0.018 + 9, job.id * 5);
-        const radius = (job.boxSize / 2) * pow(random(), 0.45) * map(rNoise, 0, 1, 0.25, 0.95);
-        const bx = origin.x + Math.cos(ang) * radius;
-        const by = origin.y + Math.sin(ang) * radius;
-        const warp = noise(bx * 0.009, by * 0.009, job.id * 11);
-        const gx = bx + map(warp, 0, 1, -job.spread * 0.5, job.spread * 0.5);
-        const gy = by + map(noise(bx * 0.009 + 44, by * 0.009 + 44, job.id * 11), 0, 1, -job.spread * 0.5, job.spread * 0.5);
-        // draw multiple micro-dots to create textured blot
-        const size = random(2.5, 16) * (1 + rNoise * 0.25);
-        const dots = Math.round(random(6, 18));
-        for(let d=0; d<dots; d++){
-          const n1 = noise(bx*0.035 + d*1.7, by*0.035 + d*2.9, job.id*3 + d);
-          const offx = map(n1,0,1,-size*0.5,size*0.5) + randomGaussian()*size*0.02;
-          const offy = map(noise(bx*0.035 + d*1.3, by*0.035 + d*1.9, job.id*2 + d),0,1,-size*0.5,size*0.5) + randomGaussian()*size*0.02;
-          const s = size * random(0.26, 0.8);
-          artLayer.noStroke();
-          artLayer.fill(job.hue, job.sat, job.light, 0.14 * random(0.85,1.05));
-          artLayer.ellipse(gx + offx, gy + offy, s * random(0.8,1.2), s * random(0.8,1.2));
-        }
-        nozzleX = gx; nozzleY = gy;
-        job.bodyDone++; remaining--; continue;
-      }
-
-      // Layer 3 (Accent Splatter): Tiny, sharp dots scattered wide. size = random(1, 4). Alpha high (0.6).
-      if (job.splatterDone < job.splatterTotal) {
-        // light speckles: noise-driven points scattered to break circularity
-        const origin = job.subCenters && job.subCenters.length ? random(job.subCenters) : {x: job.x, y: job.y};
-        const ang = random(TWO_PI) + (noise(origin.x*0.02, origin.y*0.02, job.id*9)-0.5)*PI;
-        const radius = (job.boxSize / 3) * Math.sqrt(random()) * map(noise(origin.x*0.02+3, origin.y*0.02+5, job.id*8),0,1,0.2,1.0);
-        const bx = origin.x + Math.cos(ang) * radius;
-        const by = origin.y + Math.sin(ang) * radius;
-        const warp = noise(bx*0.02, by*0.02, job.id*12);
-        const gx = bx + map(warp,0,1,-job.spread*0.35,job.spread*0.35);
-        const gy = by + map(noise(bx*0.02+21,by*0.02+21,job.id*12),0,1,-job.spread*0.35,job.spread*0.35);
-        const size = random(1, 7) * (1 + warp * 0.35);
-        const dots = Math.round(random(2,6));
-        for(let d=0; d<dots; d++){
-          const n1 = noise(bx*0.06 + d*2.2, by*0.06 + d*1.6, job.id*2 + d);
-          const offx = map(n1,0,1,-size*0.25,size*0.25) + randomGaussian()*size*0.01;
-          const offy = map(noise(bx*0.06 + d*1.4, by*0.06 + d*1.2, job.id*3 + d),0,1,-size*0.25,size*0.25) + randomGaussian()*size*0.01;
-          const s = size * random(0.4, 0.95);
-          artLayer.noStroke();
-          artLayer.fill(job.hue, job.sat, job.light, 0.55 * random(0.9,1.0));
-          artLayer.ellipse(gx + offx, gy + offy, s * random(0.8,1.2), s * random(0.8,1.2));
-        }
-        nozzleX = gx; nozzleY = gy;
-        job.splatterDone++; remaining--; continue;
-      }
-
-      // finished ink stage
-      job.stage = 'move';
-      job.pauseCounter = CONFIG.stagePause;
-      break;
+    if (!job.diffusionDrawn) {
+      renderZoneWithWetEffect(job, artLayer);
+      job.diffusionDrawn = true;
     }
+    job.stage = 'move';
+    job.pauseCounter = CONFIG.stagePause;
   } else if (job.stage === 'move') {
     job.pauseCounter--;
     if (job.pauseCounter <= 0) {
@@ -532,6 +444,208 @@ function draw(){
       printingIndex++;
     }
   }
+// Рисует зону с сеткой и акварельными пятнами, маскирует по форме зоны
+function renderZoneWithWetEffect(job, targetLayer) {
+  const poly = getJobPolygon(job);
+  // 1. Создаём отдельный слой для зоны
+  let zoneLayer = createGraphics(width, height);
+  zoneLayer.colorMode(HSL, 360, 100, 100, 1);
+  // 2. Рисуем сетку внутри зоны
+  zoneLayer.push();
+  zoneLayer.stroke(0, 0, 10, 0.08);
+  zoneLayer.strokeWeight(1);
+  const bb = getPolygonBoundingBox(poly);
+  const cell = Math.max(8, Math.round(job.boxSize / 16));
+  for(let gx=bb.minX+cell; gx<bb.maxX; gx+=cell){
+    let segs = polygonLineIntersections(poly, {x1:gx, y1:bb.minY, x2:gx, y2:bb.maxY});
+    for(let s of segs) zoneLayer.line(gx, s.y1, gx, s.y2);
+  }
+  for(let gy=bb.minY+cell; gy<bb.maxY; gy+=cell){
+    let segs = polygonLineIntersections(poly, {x1:bb.minX, y1:gy, x2:bb.maxX, y2:gy});
+    for(let s of segs) zoneLayer.line(s.x1, gy, s.x2, gy);
+  }
+  zoneLayer.pop();
+  // 3. Рисуем пятна (blobs) с мягкими краями
+  zoneLayer.push();
+  zoneLayer.blendMode(MULTIPLY);
+  const washes = Math.round(random(10,15));
+  const nVertices = 40;
+  const baseRadius = job.boxSize * 0.38;
+  for (let w = 0; w < washes; w++) {
+    const center = {
+      x: job.x + random(-job.boxSize*0.08, job.boxSize*0.08),
+      y: job.y + random(-job.boxSize*0.08, job.boxSize*0.08)
+    };
+    const alpha = 0.011 + random(0,0.018);
+    zoneLayer.noStroke();
+    zoneLayer.fill(job.hue, job.sat, job.light, alpha);
+    zoneLayer.beginShape();
+    for (let i = 0; i <= nVertices; i++) {
+      const angle = random(TWO_PI) + (TWO_PI * i) / nVertices;
+      const noiseVal = noise(
+        w*0.2 + Math.cos(angle)*1.7 + job.id*0.13,
+        w*0.2 + Math.sin(angle)*1.7 + job.id*0.19,
+        job.id*0.31 + w*0.17
+      );
+      const r = baseRadius * (1 + noiseVal * 2.0);
+      const vx = center.x + Math.cos(angle) * r;
+      const vy = center.y + Math.sin(angle) * r;
+      zoneLayer.curveVertex(vx, vy);
+    }
+    zoneLayer.endShape(CLOSE);
+  }
+  // 4. Core blobs (impact center)
+  const cores = Math.round(random(3,5));
+  for (let c = 0; c < cores; c++) {
+    const center = {
+      x: job.x + random(-job.boxSize*0.03, job.boxSize*0.03),
+      y: job.y + random(-job.boxSize*0.03, job.boxSize*0.03)
+    };
+    const alpha = 0.07 + random(0,0.09);
+    zoneLayer.noStroke();
+    zoneLayer.fill(job.hue, job.sat, job.light-12, alpha);
+    zoneLayer.beginShape();
+    for (let i = 0; i <= nVertices; i++) {
+      const angle = random(TWO_PI) + (TWO_PI * i) / nVertices;
+      const noiseVal = noise(
+        c*0.3 + Math.cos(angle)*1.2 + job.id*0.13,
+        c*0.3 + Math.sin(angle)*1.2 + job.id*0.19,
+        job.id*0.31 + c*0.17
+      );
+      const r = baseRadius * 0.45 * (1 + noiseVal * 1.2);
+      const vx = center.x + Math.cos(angle) * r;
+      const vy = center.y + Math.sin(angle) * r;
+      zoneLayer.curveVertex(vx, vy);
+    }
+    zoneLayer.endShape(CLOSE);
+  }
+  zoneLayer.pop();
+  // 5. Маска по форме зоны
+  let maskG = createGraphics(width, height);
+  maskG.noStroke();
+  maskG.fill(255);
+  maskG.beginShape();
+  for (let v of poly) maskG.vertex(v.x, v.y);
+  maskG.endShape(CLOSE);
+  zoneLayer.loadPixels();
+  maskG.loadPixels();
+  for (let i = 0; i < zoneLayer.pixels.length; i += 4) {
+    if (maskG.pixels[i] === 0) {
+      zoneLayer.pixels[i+3] = 0;
+    }
+  }
+  zoneLayer.updatePixels();
+  // 6. Наложение слоя на artLayer
+  targetLayer.image(zoneLayer, 0, 0);
+}
+// Draws watercolor diffusion: 10-15 large washes (irregular polygons), 3-5 core blobs
+function drawDiffusionBlobs(job, g) {
+  const poly = getJobPolygon(job);
+  // For triangle: create a mask
+  let maskG = null;
+  if (poly.length === 3) {
+    maskG = createGraphics(width, height);
+    maskG.noStroke();
+    maskG.fill(255);
+    maskG.beginShape();
+    for (let v of poly) maskG.vertex(v.x, v.y);
+    maskG.endShape(CLOSE);
+  }
+  // Washes
+  const washes = Math.round(random(10,15));
+  const nVertices = 40;
+  const baseRadius = job.boxSize * 0.38;
+  for (let w = 0; w < washes; w++) {
+    const center = {
+      x: job.x + random(-job.boxSize*0.08, job.boxSize*0.08),
+      y: job.y + random(-job.boxSize*0.08, job.boxSize*0.08)
+    };
+    const alpha = 0.011 + random(0,0.018);
+    const spread = job.spread * random(1.1, 2.2);
+    const offsetAngle = random(TWO_PI);
+    let shapePts = [];
+    for (let i = 0; i <= nVertices; i++) {
+      const angle = offsetAngle + (TWO_PI * i) / nVertices;
+      const noiseVal = noise(
+        w*0.2 + Math.cos(angle)*1.7 + job.id*0.13,
+        w*0.2 + Math.sin(angle)*1.7 + job.id*0.19,
+        job.id*0.31 + w*0.17
+      );
+      const r = baseRadius * (1 + noiseVal * 2.0);
+      const vx = center.x + Math.cos(angle) * r;
+      const vy = center.y + Math.sin(angle) * r;
+      shapePts.push({x:vx, y:vy});
+    }
+    g.push();
+    g.blendMode(MULTIPLY);
+    g.noStroke();
+    g.fill(job.hue, job.sat, job.light, alpha);
+    g.beginShape();
+    for (let pt of shapePts) g.curveVertex(pt.x, pt.y);
+    g.endShape(CLOSE);
+    g.pop();
+    // If triangle, mask this wash
+    if (maskG) {
+      maskG.push();
+      maskG.blendMode(MULTIPLY);
+      maskG.noStroke();
+      maskG.fill(255);
+      maskG.beginShape();
+      for (let pt of shapePts) maskG.curveVertex(pt.x, pt.y);
+      maskG.endShape(CLOSE);
+      maskG.pop();
+    }
+  }
+  // Core blobs (impact center)
+  const cores = Math.round(random(3,5));
+  for (let c = 0; c < cores; c++) {
+    const center = {
+      x: job.x + random(-job.boxSize*0.03, job.boxSize*0.03),
+      y: job.y + random(-job.boxSize*0.03, job.boxSize*0.03)
+    };
+    const alpha = 0.07 + random(0,0.09);
+    const spread = job.spread * random(0.5, 1.1);
+    const offsetAngle = random(TWO_PI);
+    let shapePts = [];
+    for (let i = 0; i <= nVertices; i++) {
+      const angle = offsetAngle + (TWO_PI * i) / nVertices;
+      const noiseVal = noise(
+        c*0.3 + Math.cos(angle)*1.2 + job.id*0.13,
+        c*0.3 + Math.sin(angle)*1.2 + job.id*0.19,
+        job.id*0.31 + c*0.17
+      );
+      const r = baseRadius * 0.45 * (1 + noiseVal * 1.2);
+      const vx = center.x + Math.cos(angle) * r;
+      const vy = center.y + Math.sin(angle) * r;
+      shapePts.push({x:vx, y:vy});
+    }
+    g.push();
+    g.blendMode(MULTIPLY);
+    g.noStroke();
+    g.fill(job.hue, job.sat, job.light-12, alpha);
+    g.beginShape();
+    for (let pt of shapePts) g.curveVertex(pt.x, pt.y);
+    g.endShape(CLOSE);
+    g.pop();
+    if (maskG) {
+      maskG.push();
+      maskG.blendMode(MULTIPLY);
+      maskG.noStroke();
+      maskG.fill(255);
+      maskG.beginShape();
+      for (let pt of shapePts) maskG.curveVertex(pt.x, pt.y);
+      maskG.endShape(CLOSE);
+      maskG.pop();
+    }
+  }
+  // If triangle, apply mask: only keep paint inside triangle
+  if (maskG) {
+    g.drawingContext.save();
+    g.drawingContext.globalCompositeOperation = 'destination-in';
+    g.image(maskG, 0, 0);
+    g.drawingContext.restore();
+  }
+}
 
   // draw a subtle printer nozzle for visual feedback at current job position
   push();
@@ -548,25 +662,105 @@ function draw(){
 }
 
 /* Helper: draw reserved box with grid; highlight = boolean shows metadata */
-function drawReservedBox(job, highlight = false){
+// Draws a technical polygonal zone (triangle, rectangle, trapezoid) with grid
+function drawReservedBox(job, highlight = false) {
   push();
-  rectMode(CENTER);
   strokeWeight(1);
   stroke(0,0,10, highlight ? 0.24 : 0.12);
   fill(0,0,100, highlight ? 0.02 : 0.01);
-  rect(job.x, job.y, job.boxSize, job.boxSize, 4);
+  let poly = getJobPolygon(job);
+  beginShape();
+  for (let v of poly) vertex(v.x, v.y);
+  endShape(CLOSE);
 
-  // internal fine grid
+  // Draw grid inside polygon (approximate by drawing lines between bounding box intersections)
+  const bb = getPolygonBoundingBox(poly);
   const cell = Math.max(8, Math.round(job.boxSize / 8));
   stroke(0,0,20,0.08);
   strokeWeight(1);
-  for(let gx=job.x - job.boxSize/2 + cell; gx < job.x + job.boxSize/2; gx += cell){
-    line(gx, job.y - job.boxSize/2, gx, job.y + job.boxSize/2);
+  // Vertical grid
+  for(let gx=bb.minX+cell; gx<bb.maxX; gx+=cell){
+    let segs = polygonLineIntersections(poly, {x1:gx, y1:bb.minY, x2:gx, y2:bb.maxY});
+    for(let s of segs) line(gx, s.y1, gx, s.y2);
   }
-  for(let gy=job.y - job.boxSize/2 + cell; gy < job.y + job.boxSize/2; gy += cell){
-    line(job.x - job.boxSize/2, gy, job.x + job.boxSize/2, gy);
+  // Horizontal grid
+  for(let gy=bb.minY+cell; gy<bb.maxY; gy+=cell){
+    let segs = polygonLineIntersections(poly, {x1:bb.minX, y1:gy, x2:bb.maxX, y2:gy});
+    for(let s of segs) line(s.x1, gy, s.x2, gy);
   }
   pop();
+}
+
+// Returns polygon vertices for job zone (triangle, rectangle, trapezoid)
+function getJobPolygon(job) {
+  const t = job.shapeType % 3;
+  const cx = job.x, cy = job.y, s = job.boxSize;
+  if (t === 0) { // Triangle
+    const a = -PI/2 + job.id;
+    return [
+      {x: cx + Math.cos(a) * s/2, y: cy + Math.sin(a) * s/2},
+      {x: cx + Math.cos(a+2*PI/3) * s/2, y: cy + Math.sin(a+2*PI/3) * s/2},
+      {x: cx + Math.cos(a+4*PI/3) * s/2, y: cy + Math.sin(a+4*PI/3) * s/2},
+    ];
+  } else if (t === 1) { // Rectangle
+    return [
+      {x: cx-s/2, y: cy-s/2},
+      {x: cx+s/2, y: cy-s/2},
+      {x: cx+s/2, y: cy+s/2},
+      {x: cx-s/2, y: cy+s/2},
+    ];
+  } else { // Trapezoid
+    const h = s/2, top = s*0.45, bot = s*0.95;
+    return [
+      {x: cx-top/2, y: cy-h},
+      {x: cx+top/2, y: cy-h},
+      {x: cx+bot/2, y: cy+h},
+      {x: cx-bot/2, y: cy+h},
+    ];
+  }
+}
+
+// Returns bounding box for polygon [{x,y}...]
+function getPolygonBoundingBox(poly) {
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  for (let v of poly) {
+    if (v.x<minX) minX=v.x;
+    if (v.x>maxX) maxX=v.x;
+    if (v.y<minY) minY=v.y;
+    if (v.y>maxY) maxY=v.y;
+  }
+  return {minX, minY, maxX, maxY};
+}
+
+// Returns array of {x1,y1,x2,y2} segments where a line crosses the polygon
+function polygonLineIntersections(poly, line) {
+  let res = [];
+  for (let i=0; i<poly.length; i++) {
+    let a = poly[i], b = poly[(i+1)%poly.length];
+    let ix = lineSegIntersection(a.x,a.y,b.x,b.y,line.x1,line.y1,line.x2,line.y2);
+    if (ix) res.push(ix);
+  }
+  // Pair up intersections to form segments
+  let segs = [];
+  for (let i=0; i+1<res.length; i+=2) {
+    segs.push({x1:res[i].x, y1:res[i].y, x2:res[i+1].x, y2:res[i+1].y});
+  }
+  return segs;
+}
+
+// Returns intersection point of two line segments, or null
+function lineSegIntersection(x1,y1,x2,y2,x3,y3,x4,y4) {
+  const denom = (x1-x2)*(y3-y4)-(y1-y2)*(x3-x4);
+  if (denom===0) return null;
+  const px = ((x1*y2-y1*x2)*(x3-x4)-(x1-x2)*(x3*y4-y3*x4))/denom;
+  const py = ((x1*y2-y1*x2)*(y3-y4)-(y1-y2)*(x3*y4-y3*x4))/denom;
+  if (
+    px<Math.min(x1,x2)-0.1 || px>Math.max(x1,x2)+0.1 ||
+    px<Math.min(x3,x4)-0.1 || px>Math.max(x3,x4)+0.1 ||
+    py<Math.min(y1,y2)-0.1 || py>Math.max(y1,y2)+0.1 ||
+    py<Math.min(y3,y4)-0.1 || py>Math.max(y3,y4)+0.1
+  ) return null;
+  return {x:px, y:py};
 }
 
 /* Helper: draw metadata text near a job */
