@@ -18,9 +18,10 @@ let wordColors = [
   [255, 150, 150], // 8th: light pink
 ];
 
-let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.05, pauseUntil: 0 };
+let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.2, pauseUntil: 0 }; // Increased speed
 let currentWordIndex = 0;
 let currentPointIndex = 0;
+let visitedPoints = []; // Track visited points for current word
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -162,6 +163,7 @@ function startGeneration(text) {
   // Start animation
   currentWordIndex = 0;
   currentPointIndex = 0;
+  visitedPoints = [];
   setTargetToCurrent();
 }
 
@@ -177,6 +179,7 @@ function setTargetToCurrent() {
       // Next word
       currentWordIndex++;
       currentPointIndex = 0;
+      visitedPoints = []; // Reset for new word
       setTargetToCurrent();
     }
   } else {
@@ -192,7 +195,9 @@ function updateNozzle() {
       nozzle.x = nozzle.targetX;
       nozzle.y = nozzle.targetY;
       nozzle.isMoving = false;
-      nozzle.pauseUntil = millis() + 500; // 0.5 second pause
+      // Add to visited
+      visitedPoints.push({x: nozzle.x, y: nozzle.y});
+      nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
     }
   } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
     currentPointIndex++;
@@ -216,12 +221,79 @@ function drawCurrentTrail() {
     strokeWeight(1);
     noFill();
 
-    // Draw dashed line from start of current word to nozzle
-    if (word.points.length > 0) {
-      let startPoint = word.points[0];
-      drawDashedLine(startPoint.x, startPoint.y, nozzle.x, nozzle.y);
+    // Draw dashed lines between visited points
+    for (let i = 0; i < visitedPoints.length - 1; i++) {
+      drawDashedLine(visitedPoints[i].x, visitedPoints[i].y, visitedPoints[i + 1].x, visitedPoints[i + 1].y);
+    }
+
+    // Draw dashed line from last visited to nozzle
+    if (visitedPoints.length > 0) {
+      let lastVisited = visitedPoints[visitedPoints.length - 1];
+      drawDashedLine(lastVisited.x, lastVisited.y, nozzle.x, nozzle.y);
+    }
+
+    // Draw arrows between visited points
+    for (let i = 0; i < visitedPoints.length - 1; i++) {
+      drawArrowBetween(visitedPoints[i], visitedPoints[i + 1], color);
+    }
+
+    // Draw arrow from last visited to nozzle
+    if (visitedPoints.length > 0) {
+      drawArrowBetween(visitedPoints[visitedPoints.length - 1], {x: nozzle.x, y: nozzle.y}, color);
+    }
+
+    // Draw markers for visited points
+    for (let point of visitedPoints) {
+      drawMarkerAt(point, color, visitedPoints.indexOf(point) === 0 ? 'start' : 'end');
+    }
+
+    // Draw numbers for visited points
+    let globalIndex = 0;
+    for (let i = 0; i < currentWordIndex; i++) globalIndex += currentPaths[i].points.length;
+    for (let i = 0; i < visitedPoints.length; i++) {
+      drawNumberAt(visitedPoints[i], color, globalIndex + i + 1);
     }
   }
+}
+
+function drawArrowBetween(p1, p2, color) {
+  stroke(color);
+  strokeWeight(1);
+  fill(color);
+
+  let midX = (p1.x + p2.x) / 2;
+  let midY = (p1.y + p2.y) / 2;
+  let angle = atan2(p2.y - p1.y, p2.x - p1.x);
+
+  let arrowLength = 15;
+  let arrowWidth = 5;
+
+  push();
+  translate(midX, midY);
+  rotate(angle);
+  triangle(0, 0, -arrowLength, -arrowWidth / 2, -arrowLength, arrowWidth / 2);
+  pop();
+}
+
+function drawMarkerAt(point, color, type) {
+  if (type === 'start') {
+    fill(color);
+    noStroke();
+    ellipse(point.x, point.y, 12, 12);
+  } else if (type === 'end') {
+    stroke(color);
+    strokeWeight(2);
+    line(point.x - 6, point.y - 6, point.x + 6, point.y + 6);
+    line(point.x + 6, point.y - 6, point.x - 6, point.y + 6);
+  }
+}
+
+function drawNumberAt(point, color, num) {
+  noStroke();
+  fill(color);
+  textAlign(CENTER, CENTER);
+  textSize(10);
+  text(num, point.x + 12, point.y - 12);
 }
 
 function drawNozzle() {
