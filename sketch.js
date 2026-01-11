@@ -23,9 +23,14 @@ let currentWordIndex = 0;
 let currentPointIndex = 0;
 let visitedPoints = []; // Track visited points for current word
 
+let artLayer; // Isolated art layer for watercolor
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   // Remove noLoop() to enable animation
+
+  // Create isolated art layer
+  artLayer = createGraphics(width, height);
 
   // Set font
   textFont('Courier');
@@ -56,6 +61,9 @@ function setup() {
 function draw() {
   // Clear canvas
   background(255);
+
+  // Draw art layer first (for future watercolor)
+  image(artLayer, 0, 0);
 
   // Update nozzle movement
   updateNozzle();
@@ -150,7 +158,7 @@ function startGeneration(text) {
         let x = random(minX, maxX);
         let y = random(minY, maxY);
 
-        path.push({x, y});
+        path.push({x, y, letter});
         highlightedCells.add(index);
       }
     }
@@ -196,7 +204,10 @@ function updateNozzle() {
       nozzle.y = nozzle.targetY;
       nozzle.isMoving = false;
       // Add to visited
-      visitedPoints.push({x: nozzle.x, y: nozzle.y});
+      let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
+      visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
+      // Execute inking hook
+      executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].color);
       nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
     }
   } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
@@ -446,5 +457,7 @@ function highlightCells() {
   }
 }
 
-// Make startGeneration global
-window.startGeneration = startGeneration;
+function executeInking(letter, x, y, color) {
+  // Hook for future watercolor inking
+  console.log("Впрыск краски для буквы: " + letter + " at (" + x + ", " + y + ") with color " + color);
+}
