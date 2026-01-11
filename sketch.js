@@ -7,17 +7,6 @@ let gridOffsetX, gridOffsetY;
 let currentPaths = [];
 let highlightedCells = new Set();
 
-let wordColors = [
-  [100, 100, 100], // 1st word: neutral gray
-  [100, 150, 255], // 2nd: light blue
-  [255, 100, 100], // 3rd: light red
-  [100, 255, 100], // 4th: light green
-  [255, 200, 100], // 5th: light orange
-  [200, 100, 255], // 6th: light purple
-  [100, 255, 200], // 7th: light cyan
-  [255, 150, 150], // 8th: light pink
-];
-
 let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.2, pauseUntil: 0 }; // Increased speed
 let currentWordIndex = 0;
 let currentPointIndex = 0;
@@ -163,7 +152,12 @@ function startGeneration(text) {
       }
     }
     if (path.length > 0) {
-      currentPaths.push({points: path, color: wordColors[colorIndex % wordColors.length]});
+      // Generate word color based on first letter's hue range
+      let firstLetter = word[0];
+      let hueRange = ALPHABET_DNA[firstLetter].hueRange;
+      let wordHue = random(hueRange[0], hueRange[1]);
+      let wordColor = color(wordHue, GRID_CONFIG.SATURATION, GRID_CONFIG.BRIGHTNESS);
+      currentPaths.push({points: path, color: wordColor});
       colorIndex++;
     }
   }
@@ -457,7 +451,7 @@ function highlightCells() {
   }
 }
 
-function executeInking(letter, x, y, color) {
+function executeInking(letter, x, y, wordColor) {
   // Hook for future watercolor inking
-  console.log("Впрыск краски для буквы: " + letter + " at (" + x + ", " + y + ") with color " + color);
+  console.log("Впрыск краски для буквы: " + letter + " at (" + x + ", " + y + ") with hue " + hue(wordColor));
 }
