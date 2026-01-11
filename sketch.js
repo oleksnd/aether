@@ -189,6 +189,8 @@ function startGeneration(text) {
   highlightedCells.clear();
 
   let colorIndex = 0;
+  // Track fluid colors used for this generation so we can avoid duplicates when requested
+  let usedFluidColors = [];
   for (let word of wordArrays) {
     let path = [];
     for (let letter of word) {
@@ -218,7 +220,17 @@ function startGeneration(text) {
     }
     if (path.length > 0) {
       // pick a fluid color for this word from the Fluid module (safe fallback)
-      let fluidCol = (typeof Fluid !== 'undefined' && Fluid.pickColor) ? Fluid.pickColor() : [255, 50, 50];
+      let fluidCol = null;
+      try {
+        if (typeof Fluid !== 'undefined' && typeof Fluid.pickColorDistinct === 'function' && window.currentFluidStyle === 'Aether Soft Modern') {
+          fluidCol = Fluid.pickColorDistinct(usedFluidColors);
+          // record used color as a simple array copy
+          if (Array.isArray(fluidCol)) usedFluidColors.push(fluidCol.slice());
+        }
+      } catch (e) { fluidCol = null; }
+
+      if (!fluidCol) fluidCol = (typeof Fluid !== 'undefined' && Fluid.pickColor) ? Fluid.pickColor() : [255, 50, 50];
+
       currentPaths.push({points: path, color: wordColors[colorIndex % wordColors.length], fluidColor: fluidCol});
       colorIndex++;
     }
