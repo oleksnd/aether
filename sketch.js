@@ -129,6 +129,9 @@ function drawPath() {
 
   // Draw start and end markers
   drawMarkers();
+
+  // Draw step numbers
+  drawNumbers();
 }
 
 function drawArrows() {
@@ -149,9 +152,9 @@ function drawArrows() {
     let dy = end.y - start.y;
     let angle = atan2(dy, dx);
 
-    // Arrow size
-    let arrowLength = 15;
-    let arrowWidth = 6;
+    // Arrow size (increased for clarity)
+    let arrowLength = 20;
+    let arrowWidth = 8;
 
     // Draw arrowhead as triangle
     push();
@@ -159,32 +162,38 @@ function drawArrows() {
     rotate(angle);
     triangle(0, 0, -arrowLength, -arrowWidth / 2, -arrowLength, arrowWidth / 2);
     pop();
-
-    // Draw number next to arrow
-    noStroke();
-    fill(0);
-    textAlign(CENTER, CENTER);
-    textSize(12);
-    text(i + 1, midX + cos(angle) * 20, midY + sin(angle) * 20); // Offset along the direction
   }
 }
 
 function drawMarkers() {
   if (currentPath.length === 0) return;
 
-  // Start marker: larger circle
+  // Start marker: bold filled circle in center of first cell
   let start = currentPath[0];
   fill(0, 150, 255);
   noStroke();
-  ellipse(start.x, start.y, 15, 15);
+  ellipse(start.x, start.y, 20, 20);
 
-  // End marker: X
+  // End marker: clear X in center of last cell
   if (currentPath.length > 1) {
     let end = currentPath[currentPath.length - 1];
     stroke(255, 0, 0);
-    strokeWeight(3);
-    line(end.x - 8, end.y - 8, end.x + 8, end.y + 8);
-    line(end.x + 8, end.y - 8, end.x - 8, end.y + 8);
+    strokeWeight(4);
+    line(end.x - 10, end.y - 10, end.x + 10, end.y + 10);
+    line(end.x + 10, end.y - 10, end.x - 10, end.y + 10);
+  }
+}
+
+function drawNumbers() {
+  noStroke();
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(12);
+
+  for (let i = 0; i < currentPath.length; i++) {
+    let point = currentPath[i];
+    // Position slightly above and to the right of the center
+    text(i + 1, point.x + 15, point.y - 15);
   }
 }
 
