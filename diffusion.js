@@ -2,12 +2,26 @@
 // Responsible for fluid palette, diffusion parameters, and rendering ink splashes on an offscreen artLayer.
 
 const Fluid = (function(){
-  // Temporary fluid palette (red, yellow, blue)
-  const FLUID_PALETTE = [
-    [255, 50, 50],
-    [255, 200, 0],
-    [50, 50, 255]
-  ];
+  // Fluid palette can be provided by a separate palette script as
+  // window.CUSTOM_FLUID_PALETTE_ITEMS = [{id,name,hex,rgb:[r,g,b]}...]
+  // Build internal FLUID_PALETTE (array of RGB arrays) from that if present,
+  // otherwise fall back to a small default palette.
+  let FLUID_PALETTE = null;
+  try {
+    if (typeof window !== 'undefined' && Array.isArray(window.CUSTOM_FLUID_PALETTE_ITEMS) && window.CUSTOM_FLUID_PALETTE_ITEMS.length > 0) {
+      FLUID_PALETTE = window.CUSTOM_FLUID_PALETTE_ITEMS.map(it => Array.isArray(it.rgb) ? it.rgb.slice() : [255,0,0]);
+      // Expose metadata for UI if needed
+      if (typeof window !== 'undefined') window.FLUID_PALETTE_META = window.CUSTOM_FLUID_PALETTE_ITEMS.map(it => ({ id: it.id, name: it.name, hex: it.hex }));
+    }
+  } catch (e) { FLUID_PALETTE = null; }
+
+  if (!Array.isArray(FLUID_PALETTE) || FLUID_PALETTE.length === 0) {
+    FLUID_PALETTE = [
+      [255, 50, 50],
+      [255, 200, 0],
+      [50, 50, 255]
+    ];
+  }
 
   // Diffusion engine parameters (coalescence / puddle mode)
   const DIFFUSION = {
