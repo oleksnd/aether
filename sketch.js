@@ -22,6 +22,9 @@ let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.2, 
 let currentWordIndex = 0;
 let currentPointIndex = 0;
 
+// Turbo steps per frame to accelerate ink rendering (5-10 recommended)
+const TURBO_STEPS = 8;
+
 // Fluid drawing moved to `diffusion.js`. Use `Fluid.pickColor()` and `Fluid.executeInking()` for ink behavior.
 
 let visitedPoints = []; // Track visited points for current word
@@ -99,8 +102,8 @@ function draw() {
   // Draw art layer first (for future watercolor)
   image(artLayer, 0, 0);
 
-  // Update nozzle movement
-  updateNozzle();
+  // Update nozzle movement (process multiple steps per frame for turbo rendering)
+  for (let t = 0; t < TURBO_STEPS; t++) updateNozzle();
 
   // Overlays: grid, letters, trails and highlights — toggled via window.showOverlays
   let overlays = (typeof window.showOverlays === 'undefined') ? true : window.showOverlays;
