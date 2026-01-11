@@ -18,9 +18,13 @@ let wordColors = [
   [255, 150, 150], // 8th: light pink
 ];
 
+let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.05, pauseUntil: 0 };
+let currentWordIndex = 0;
+let currentPointIndex = 0;
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  noLoop(); // Static drawing, redraw only when needed
+  // Remove noLoop() to enable animation
 
   // Set font
   textFont('Courier');
@@ -38,6 +42,12 @@ function setup() {
   gridOffsetX = (width - gridCols * cellWidth) / 2;
   gridOffsetY = (height - gridRows * cellHeight) / 2;
 
+  // Initialize nozzle at center
+  nozzle.x = width / 2;
+  nozzle.y = height / 2;
+  nozzle.targetX = width / 2;
+  nozzle.targetY = height / 2;
+
   // Draw the static grid and letters
   drawGrid();
 }
@@ -46,16 +56,23 @@ function draw() {
   // Clear canvas
   background(255);
 
+  // Update nozzle movement
+  updateNozzle();
+
   // Redraw grid and letters
   drawGrid();
 
-  // Draw paths if any
-  if (currentPaths.length > 0) {
-    drawPaths();
-  }
+  // Draw completed words
+  drawCompletedWords();
+
+  // Draw current trail
+  drawCurrentTrail();
 
   // Highlight cells
   highlightCells();
+
+  // Draw nozzle
+  drawNozzle();
 }
 
 function drawGrid() {
@@ -142,8 +159,75 @@ function startGeneration(text) {
     }
   }
 
-  // Redraw to show paths and highlights
-  redraw();
+  // Start animation
+  currentWordIndex = 0;
+  currentPointIndex = 0;
+  setTargetToCurrent();
+}
+
+function setTargetToCurrent() {
+  if (currentWordIndex < currentPaths.length) {
+    let word = currentPaths[currentWordIndex];
+    if (currentPointIndex < word.points.length) {
+      let point = word.points[currentPointIndex];
+      nozzle.targetX = point.x;
+      nozzle.targetY = point.y;
+      nozzle.isMoving = true;
+    } else {
+      // Next word
+      currentWordIndex++;
+      currentPointIndex = 0;
+      setTargetToCurrent();
+    }
+  } else {
+    nozzle.isMoving = false;
+  }
+}
+
+function updateNozzle() {
+  if (nozzle.isMoving) {
+    nozzle.x = lerp(nozzle.x, nozzle.targetX, nozzle.speed);
+    nozzle.y = lerp(nozzle.y, nozzle.targetY, nozzle.speed);
+    if (dist(nozzle.x, nozzle.y, nozzle.targetX, nozzle.targetY) < 1) {
+      nozzle.x = nozzle.targetX;
+      nozzle.y = nozzle.targetY;
+      nozzle.isMoving = false;
+      nozzle.pauseUntil = millis() + 500; // 0.5 second pause
+    }
+  } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
+    currentPointIndex++;
+    setTargetToCurrent();
+  }
+}
+
+function drawCompletedWords() {
+  let globalIndex = 0;
+  for (let i = 0; i < currentWordIndex; i++) {
+    drawPathForWord(currentPaths[i], globalIndex);
+    globalIndex += currentPaths[i].points.length;
+  }
+}
+
+function drawCurrentTrail() {
+  if (currentWordIndex < currentPaths.length) {
+    let word = currentPaths[currentWordIndex];
+    let color = word.color;
+    stroke(color);
+    strokeWeight(1);
+    noFill();
+
+    // Draw dashed line from start of current word to nozzle
+    if (word.points.length > 0) {
+      let startPoint = word.points[0];
+      drawDashedLine(startPoint.x, startPoint.y, nozzle.x, nozzle.y);
+    }
+  }
+}
+
+function drawNozzle() {
+  fill(0);
+  noStroke();
+  ellipse(nozzle.x, nozzle.y, 5, 5);
 }
 
 function drawPaths() {
@@ -183,7 +267,7 @@ function drawDashedPath(points, dashLen = 5, gapLen = 5) {
   }
 }
 
-function drawDashedLine(x1, y1, x2, y2, dashLen, gapLen) {
+function drawDashedLine(x1, y1, x2, y2, dashLen = 5, gapLen = 5) {
   let dx = x2 - x1;
   let dy = y2 - y1;
   let dist = sqrt(dx * dx + dy * dy);
