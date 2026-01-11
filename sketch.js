@@ -116,8 +116,22 @@ function startGeneration(text) {
         let index = ALPHABET_DNA[letter].zoneIndex;
         let col = index % gridCols;
         let row = Math.floor(index / gridCols);
-        let x = gridOffsetX + col * cellWidth + cellWidth / 2;
-        let y = gridOffsetY + row * cellHeight + cellHeight / 2;
+
+        // Calculate cell bounds
+        let cellLeft = gridOffsetX + col * cellWidth;
+        let cellTop = gridOffsetY + row * cellHeight;
+        let marginPx = GRID_CONFIG.MARGIN * cellWidth; // Use cellWidth for margin, assuming square-ish
+
+        // Safe area within cell
+        let minX = cellLeft + marginPx;
+        let maxX = cellLeft + cellWidth - marginPx;
+        let minY = cellTop + marginPx;
+        let maxY = cellTop + cellHeight - marginPx;
+
+        // Random point within safe area
+        let x = random(minX, maxX);
+        let y = random(minY, maxY);
+
         path.push({x, y});
         highlightedCells.add(index);
       }
