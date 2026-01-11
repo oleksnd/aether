@@ -187,6 +187,8 @@ function startGeneration(text) {
   // Clear previous paths and highlights
   currentPaths = [];
   highlightedCells.clear();
+  // Clear the art layer so each generation starts fresh
+  try { if (artLayer && typeof artLayer.clear === 'function') artLayer.clear(); } catch (e) { /* ignore */ }
 
   let colorIndex = 0;
   // Track fluid colors used for this generation so we can avoid duplicates when requested

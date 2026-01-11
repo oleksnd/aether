@@ -142,6 +142,18 @@
         if (typeof artLayer.blendMode === 'function') artLayer.blendMode(MULTIPLY);
 
         let baseCol = Array.isArray(chosenColor) ? chosenColor.slice() : null;
+
+        // Ensure a visible organic blob is drawn first (fallback for missing brush libs)
+        try {
+          let blobSize = Math.max(8, brushSize * 0.6);
+          if (baseCol) {
+            // drawOrganicBlob expects (gfx, cx, cy, baseRadius, color, layers, verticalSquash)
+            drawOrganicBlob(artLayer, x, y, blobSize, baseCol, 4, 0.75);
+          } else {
+            artLayer.fill(0, 0, 0, Math.floor((lastInk.alpha || DIFFUSION.baseAlphaMax) * 0.28));
+            artLayer.ellipse(x, y, blobSize * 1.4, blobSize * 1.4);
+          }
+        } catch (e) { /* non-fatal */ }
         let speedNorm = constrain(speed / 0.6, 0, 1);
         let spread = DIFFUSION.spreadSigma * (1 + (1 - speedNorm) * 1.2);
 
