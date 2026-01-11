@@ -28,7 +28,7 @@ const ALPHABET_DNA = {
   'W': { zoneIndex: 22, baseColor: '#F0FFF0' },
   'X': { zoneIndex: 23, baseColor: '#F5F5DC' },
   'Y': { zoneIndex: 24, baseColor: '#F0F8FF' },
-  'Z': { zoneIndex: 25, baseColor: '#FAF0E6' }
+  'Z': { zoneIndex: 29, baseColor: '#FAF0E6' }
 };
 
 const GRID_CONFIG = {

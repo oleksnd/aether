@@ -81,13 +81,15 @@ function drawGrid() {
   fill(150); // Light gray, quiet
   noStroke();
 
-  for (let index = 0; index < 26; index++) {
-    let col = index % gridCols;
-    let row = Math.floor(index / gridCols);
-    let x = gridOffsetX + col * cellWidth + cellWidth / 2;
-    let y = gridOffsetY + row * cellHeight + cellHeight / 2;
+  for (let index = 0; index < 30; index++) {
     let letter = String.fromCharCode(65 + index); // A=65
-    text(letter, x, y);
+    if (ALPHABET_DNA[letter]) {
+      let col = index % gridCols;
+      let row = Math.floor(index / gridCols);
+      let x = gridOffsetX + col * cellWidth + cellWidth / 2;
+      let y = gridOffsetY + row * cellHeight + cellHeight / 2;
+      text(letter, x, y);
+    }
   }
 }
 
