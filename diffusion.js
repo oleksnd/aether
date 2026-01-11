@@ -214,16 +214,18 @@ const Fluid = (function(){
       if (!Array.isArray(FLUID_PALETTE)) return pickColor();
       // Normalize usedList to list of strings for quick comparison
       let used = Array.isArray(usedList) ? usedList.map(c => Array.isArray(c) ? c.join(',') : String(c)) : [];
-      for (let i = 0; i < FLUID_PALETTE.length; i++) {
-        let col = FLUID_PALETTE[i];
-        let key = Array.isArray(col) ? col.join(',') : String(col);
-        if (used.indexOf(key) === -1) return col.slice ? col.slice() : col;
+      // candidates = palette colors not present in used
+      let candidates = FLUID_PALETTE.filter(col => used.indexOf(Array.isArray(col) ? col.join(',') : String(col)) === -1);
+      if (candidates.length > 0) {
+        // choose randomly among unused candidates to provide random ordering
+        let pick = candidates[Math.floor(random(0, candidates.length))];
+        return Array.isArray(pick) ? pick.slice() : pick;
       }
     } catch (e) {
       // ignore and fallback
     }
-    // all used or error — return random
-    return pickColor();
+    // all used or error — return a random color from the full palette
+    return FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))].slice ? FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))].slice() : FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))];
   }
 
   // Recursive subdivision + deformation of a polygon contour (Tyler Hobbs style)
