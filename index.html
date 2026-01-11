@@ -134,21 +134,21 @@
 
         /* Simple toggle switch (overlay visibility) */
         .toggle {
-            width: 44px;
-            height: 24px;
+            width: 36px;
+            height: 18px;
             border-radius: 999px;
             background: #eee;
             border: none;
             display: inline-flex;
             align-items: center;
-            padding: 3px;
+            padding: 2px;
             cursor: pointer;
             box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
             transition: background 150ms ease;
         }
         .toggle .toggle-knob {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             background: #fff;
             box-shadow: 0 2px 6px rgba(0,0,0,0.12);
@@ -156,7 +156,9 @@
             transition: transform 160ms ease;
         }
         .toggle.on { background: #111; }
-        .toggle.on .toggle-knob { transform: translateX(20px); }
+        .toggle.on .toggle-knob { transform: translateX(18px); }
+        #overlay-label { font-family: 'Courier New', monospace; color: #111; }
+        #overlay-label.inactive { color: #777; }
 
         .example-btn { margin-right:8px; padding:6px 10px; font-size:13px; background:rgba(255,255,255,0.9); border-radius:6px; border:none; cursor:pointer; }
         .example-btn:hover { background:rgba(255,255,255,1); }
@@ -168,6 +170,8 @@
         <img id="logo" src="assets/logo.svg" alt="Logo">
         <!-- Export + overlay toggle (top-right) -->
         <div id="export-wrap" style="position:absolute; top:12px; right:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
+          <!-- Label for overlay toggle -->
+          <span id="overlay-label" style="font-size:12px; color:#111; margin-right:6px; cursor:pointer; user-select:none;">Grid</span>
           <!-- Overlay visibility toggle -->
           <button id="overlay-toggle" title="Toggle overlays" aria-pressed="true" aria-label="Toggle overlays" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
           <!-- Export icon (Material Symbol) -->
@@ -198,16 +202,30 @@
         // Overlay toggle: show/hide grid/letters/paths (default: visible)
         (function(){
           const toggle = document.getElementById('overlay-toggle');
+          const label = document.getElementById('overlay-label');
           // Start state
           window.showOverlays = true;
-          if (toggle) {
-            toggle.setAttribute('aria-pressed', 'true');
-            toggle.classList.add('on');
 
+          function updateUI(state) {
+            if (!toggle) return;
+            toggle.classList.toggle('on', state);
+            toggle.setAttribute('aria-pressed', String(state));
+            if (label) label.classList.toggle('inactive', !state);
+          }
+
+          updateUI(window.showOverlays);
+
+          if (toggle) {
             toggle.addEventListener('click', () => {
               window.showOverlays = !window.showOverlays;
-              toggle.classList.toggle('on', window.showOverlays);
-              toggle.setAttribute('aria-pressed', String(window.showOverlays));
+              updateUI(window.showOverlays);
+            });
+          }
+
+          if (label) {
+            // clicking label toggles overlays too
+            label.addEventListener('click', () => {
+              if (toggle) toggle.click();
             });
           }
         })();
