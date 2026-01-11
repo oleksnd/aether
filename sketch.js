@@ -467,3 +467,51 @@ function highlightCells() {
 }
 
 // `executeInking` implementation moved to `diffusion.js` (use `Fluid.executeInking`)
+
+// Export PNG containing only the art layer (no grid / letters / nozzle)
+function exportPNG(filename) {
+  if (!artLayer) {
+    console.warn('No artLayer available to export.');
+    return;
+  }
+
+  // Create filename with timestamp if not provided
+  let name = filename;
+  if (!name) {
+    const ts = year() + nf(month(), 2) + nf(day(), 2) + '-' + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2);
+    name = 'aether-' + ts + '.png';
+  }
+
+  // Extract a p5.Image snapshot of the art layer
+  let img = artLayer.get();
+
+  // Save the image as PNG — this will preserve transparency
+  save(img, name);
+  console.log('Exported PNG:', name);
+}
+
+// Expose as a global so index.html's export button can call it
+window.exportPNG = exportPNG;
+
+// Handle window resize: preserve artLayer content and recalc grid metrics
+function windowResized() {
+  // Snapshot previous art
+  let prev = artLayer ? artLayer.get() : null;
+
+  // Resize main canvas
+  resizeCanvas(windowWidth, windowHeight);
+
+  // Recreate art layer at new size and restore previous pixels
+  let newArt = createGraphics(width, height);
+  if (prev) newArt.image(prev, 0, 0);
+  artLayer = newArt;
+
+  // Reinitialize fluid module with new layer
+  if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
+
+  // Recalculate cell dims
+  cellWidth = width / gridCols;
+  cellHeight = height / gridRows;
+  gridOffsetX = (width - gridCols * cellWidth) / 2;
+  gridOffsetY = (height - gridRows * cellHeight) / 2;
+}
