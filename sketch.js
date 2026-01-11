@@ -18,8 +18,12 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   // Remove noLoop() to enable animation
 
+  // Set color mode to HSB
+  colorMode(HSB);
+
   // Create isolated art layer
   artLayer = createGraphics(width, height);
+  artLayer.colorMode(HSB);
   artLayer.blendMode(MULTIPLY);
 
   // Set font
@@ -466,6 +470,7 @@ function executeInking(letter, x, y, wordColor) {
   let c = wordColor.copy();
   c.setAlpha(20);
   artLayer.fill(c);
-  artLayer.ellipse(x, y, random(35, 55));
+  artLayer.ellipse(x, y, random(40, 60)); // Main spot
+  artLayer.ellipse(x, y, random(10, 20)); // Core (denser)
   artLayer.pop();
 }
