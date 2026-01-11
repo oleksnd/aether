@@ -66,6 +66,19 @@ function setup() {
   // Initialize Fluid module with the art layer (module sets blend mode internally)
   if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
 
+  // Wire up style selector: keep a small runtime state and listen for changes
+  try {
+    const styleSel = document.getElementById('styleSelector');
+    if (styleSel) {
+      // default to Aether Soft
+      styleSel.value = styleSel.value || 'Aether Soft';
+      window.currentFluidStyle = styleSel.value;
+      styleSel.addEventListener('change', (e) => {
+        window.currentFluidStyle = e.target.value;
+      });
+    }
+  } catch (e) { /* ignore in non-browser contexts */ }
+
   // Load brush libraries (gl-matrix, p5.brush) asynchronously and init against artLayer
   loadBrushes(artLayer).catch(() => { /* non-fatal: fallback rendering will be used */ });
 

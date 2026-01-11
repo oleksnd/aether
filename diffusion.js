@@ -287,230 +287,234 @@ const Fluid = (function(){
     return outerRadius;
   }
 
-  function executeInking(letter, x, y, chosenColor) {
-    if (!artLayer) return;
+  // Preset styles container. Each key is a preset name; value is a function(letter,x,y,chosenColor)
+  const FLUID_STYLES = {
+    'Aether Soft': function(letter, x, y, chosenColor) {
+      if (!artLayer) return;
 
-    // accumulation and timing (retain some of the previous behavior)
-    let now = millis();
-    let distFromLast = (lastInk.x === null) ? Infinity : dist(x, y, lastInk.x, lastInk.y);
-    let dt = (lastInk.time) ? (now - lastInk.time) : 0;
+      // accumulation and timing (retain previous behavior)
+      let now = millis();
+      let distFromLast = (lastInk.x === null) ? Infinity : dist(x, y, lastInk.x, lastInk.y);
+      let dt = (lastInk.time) ? (now - lastInk.time) : 0;
 
-    if (distFromLast < 20 && dt < 900) {
-      lastInk.size = Math.min(DIFFUSION.basePuddleMaxCap, lastInk.size + DIFFUSION.basePuddleGrowthRate);
-      let alphaInc = Math.floor(DIFFUSION.accumulationRate * (dt / 100));
-      lastInk.alpha = Math.min(DIFFUSION.maxAccumAlpha, (lastInk.alpha || 0) + alphaInc);
-      lastInk.time = now;
-      lastInk.x = x;
-      lastInk.y = y;
-    } else {
-      lastInk.size = random(DIFFUSION.basePuddleMin, DIFFUSION.basePuddleMax);
-      lastInk.alpha = Math.floor(random(DIFFUSION.baseAlphaMin, DIFFUSION.baseAlphaMin * 2));
-      lastInk.time = now;
-      lastInk.x = x;
-      lastInk.y = y;
-    }
+      if (distFromLast < 20 && dt < 900) {
+        lastInk.size = Math.min(DIFFUSION.basePuddleMaxCap, lastInk.size + DIFFUSION.basePuddleGrowthRate);
+        let alphaInc = Math.floor(DIFFUSION.accumulationRate * (dt / 100));
+        lastInk.alpha = Math.min(DIFFUSION.maxAccumAlpha, (lastInk.alpha || 0) + alphaInc);
+        lastInk.time = now;
+        lastInk.x = x;
+        lastInk.y = y;
+      } else {
+        lastInk.size = random(DIFFUSION.basePuddleMin, DIFFUSION.basePuddleMax);
+        lastInk.alpha = Math.floor(random(DIFFUSION.baseAlphaMin, DIFFUSION.baseAlphaMin * 2));
+        lastInk.time = now;
+        lastInk.x = x;
+        lastInk.y = y;
+      }
 
-    // Compute speed-based size modifier (larger when nozzle was moving faster)
-    let speed = dt > 0 ? (distFromLast / dt) : 0;
-    let speedFactor = map(constrain(speed, 0, 2), 0, 2, 0.7, 1.6);
-    let brushSize = lastInk.size * speedFactor * random(0.85, 1.25);
+      // Compute speed-based size modifier (larger when nozzle was moving faster)
+      let speed = dt > 0 ? (distFromLast / dt) : 0;
+      let speedFactor = map(constrain(speed, 0, 2), 0, 2, 0.7, 1.6);
+      let brushSize = lastInk.size * speedFactor * random(0.85, 1.25);
 
-    // Pulsate brush size slightly based on letter seed and time (gives rhythm per-letter)
-    let seed = 0;
-    try { seed = (letter && letter.charCodeAt && letter.charCodeAt(0)) || 0; } catch (e) { seed = 0; }
-    let pulse = 1 + 0.06 * sin((millis() * 0.004) + (seed * 0.13));
-    brushSize *= pulse;
+      // Pulsate brush size slightly based on letter seed and time (gives rhythm per-letter)
+      let seed = 0;
+      try { seed = (letter && letter.charCodeAt && letter.charCodeAt(0)) || 0; } catch (e) { seed = 0; }
+      let pulse = 1 + 0.06 * sin((millis() * 0.004) + (seed * 0.13));
+      brushSize *= pulse;
 
-    // Preferred path: use p5.brush API when available
-    let usedBrush = false;
-    try {
-      // try common global entrypoints for the library
-      let BrushClass = window.Brush || window.P5Brush || window.p5Brush || (window.p5 && window.p5.Brush);
+      // Preferred path: use p5.brush API when available
+      let usedBrush = false;
+      try {
+        let BrushClass = window.Brush || window.P5Brush || window.p5Brush || (window.p5 && window.p5.Brush);
 
-      if (BrushClass) {
-        // create an instance per-call if not persistent (safe). Prefer constructors that accept a graphics target.
-        let brushInstance = null;
-        try {
-          // common constructor signatures attempted
-          if (typeof BrushClass === 'function') {
-            try { brushInstance = new BrushClass(artLayer); } catch (e) { /* ignore */ }
-            if (!brushInstance && typeof BrushClass.create === 'function') brushInstance = BrushClass.create(artLayer);
-          }
-          if (!brushInstance && typeof window.p5Brush === 'object' && typeof window.p5Brush.createBrush === 'function') {
-            brushInstance = window.p5Brush.createBrush(artLayer);
-          }
-        } catch (e) { brushInstance = null; }
+        if (BrushClass) {
+          let brushInstance = null;
+          try {
+            if (typeof BrushClass === 'function') {
+              try { brushInstance = new BrushClass(artLayer); } catch (e) { /* ignore */ }
+              if (!brushInstance && typeof BrushClass.create === 'function') brushInstance = BrushClass.create(artLayer);
+            }
+            if (!brushInstance && typeof window.p5Brush === 'object' && typeof window.p5Brush.createBrush === 'function') {
+              brushInstance = window.p5Brush.createBrush(artLayer);
+            }
+          } catch (e) { brushInstance = null; }
 
-        if (brushInstance) {
-          // Configure a wet watercolor-like stroke if API supports options
-          // Apply slight hue/brightness jitter per stroke to avoid uniform color
-          let baseRGB = Array.isArray(chosenColor) ? chosenColor.slice() : null;
-          let jittered = baseRGB;
-          if (baseRGB) {
-            let hsl = rgbToHsl(baseRGB[0], baseRGB[1], baseRGB[2]);
-            hsl.h += random(-5, 5);
-            hsl.l = constrain(hsl.l + random(-4, 6), 6, 94);
-            jittered = hslToRgb(hsl.h, hsl.s, hsl.l);
-          }
+          if (brushInstance) {
+            let baseRGB = Array.isArray(chosenColor) ? chosenColor.slice() : null;
+            let jittered = baseRGB;
+            if (baseRGB) {
+              let hsl = rgbToHsl(baseRGB[0], baseRGB[1], baseRGB[2]);
+              hsl.h += random(-5, 5);
+              hsl.l = constrain(hsl.l + random(-4, 6), 6, 94);
+              jittered = hslToRgb(hsl.h, hsl.s, hsl.l);
+            }
 
-          let rgba = null;
-          if (Array.isArray(jittered)) rgba = `rgba(${jittered[0]},${jittered[1]},${jittered[2]},${(lastInk.alpha||DIFFUSION.baseAlphaMax)/255})`;
-          else rgba = chosenColor;
+            let rgba = null;
+            if (Array.isArray(jittered)) rgba = `rgba(${jittered[0]},${jittered[1]},${jittered[2]},${(lastInk.alpha||DIFFUSION.baseAlphaMax)/255})`;
+            else rgba = chosenColor;
 
-          let opts = {
-            color: rgba,
-            size: brushSize,
-            wetness: 0.9,
-            spread: 0.85,
-            bleed: 0.9,
-            scattering: 0.15,
-            blend: 'multiply',
-            field: { grain: DIFFUSION.grainDensity * 2.0 }
-          };
+            let opts = {
+              color: rgba,
+              size: brushSize,
+              wetness: 0.9,
+              spread: 0.85,
+              bleed: 0.9,
+              scattering: 0.15,
+              blend: 'multiply',
+              field: { grain: DIFFUSION.grainDensity * 2.0 }
+            };
 
-          // Try common draw/paint/stroke methods
-          if (typeof brushInstance.paint === 'function') {
-            brushInstance.paint(x, y, opts);
-            usedBrush = true;
-          } else if (typeof brushInstance.stroke === 'function') {
-            brushInstance.stroke({ x, y, size: brushSize, color: rgba, options: opts });
-            usedBrush = true;
-          } else if (typeof brushInstance.draw === 'function') {
-            brushInstance.draw(x, y, opts);
-            usedBrush = true;
-          } else if (typeof brushInstance === 'function') {
-            // some libs export a callable factory
-            brushInstance(x, y, opts);
-            usedBrush = true;
+            if (typeof brushInstance.paint === 'function') {
+              brushInstance.paint(x, y, opts);
+              usedBrush = true;
+            } else if (typeof brushInstance.stroke === 'function') {
+              brushInstance.stroke({ x, y, size: brushSize, color: rgba, options: opts });
+              usedBrush = true;
+            } else if (typeof brushInstance.draw === 'function') {
+              brushInstance.draw(x, y, opts);
+              usedBrush = true;
+            } else if (typeof brushInstance === 'function') {
+              brushInstance(x, y, opts);
+              usedBrush = true;
+            }
           }
         }
+      } catch (e) {
+        usedBrush = false;
       }
-    } catch (e) {
-      // swallow brush errors and fall back
-      usedBrush = false;
-    }
 
-    // Helper: draw capillary rays (thin elongated blobs) radiating from center
-    function drawCapillaries(gfx, cx, cy, baseSize, color, count) {
-      count = count || Math.floor(map(baseSize, 40, 400, 6, 20));
-      for (let i = 0; i < count; i++) {
-        let ang = random(0, TWO_PI);
-        let len = random(baseSize * 0.6, baseSize * 1.6) * (1 + random(-0.15, 0.3));
-        let midx = cx + cos(ang) * (len * 0.45 + random(-6, 6));
-        let midy = cy + sin(ang) * (len * 0.45 + random(-6, 6));
-        let thin = random(max(1, baseSize * 0.04), max(1.5, baseSize * 0.12));
-        // color jitter per capillary
-        let c = color;
-        if (Array.isArray(color)) {
-          let hsl = rgbToHsl(color[0], color[1], color[2]);
-          hsl.h += random(-3, 3);
-          hsl.l = constrain(hsl.l + random(-6, 4), 4, 96);
-          c = hslToRgb(hsl.h, hsl.s, hsl.l);
-        }
-        gfx.push();
-        gfx.translate(midx, midy);
-        gfx.rotate(ang + random(-0.15, 0.15));
-        gfx.noStroke();
-        if (Array.isArray(c)) gfx.fill(c[0], c[1], c[2], Math.floor(random(8, 28)));
-        else gfx.fill(c);
-        // elongated organic blob
-        drawOrganicBlob(gfx, 0, 0, thin, c, 2, random(0.25, 0.6));
-        gfx.pop();
-      }
-    }
-
-    // Fallback: high-density micro-droplet streams (many filaments)
-    if (!usedBrush) {
-      artLayer.push();
-      artLayer.noStroke();
-
-      // Ensure multiply blending for accumulation
-      if (typeof artLayer.blendMode === 'function') artLayer.blendMode(MULTIPLY);
-
-      // Base parameters
-      let baseCol = Array.isArray(chosenColor) ? chosenColor.slice() : null;
-      // compute spread: larger when nozzle is slower
-      let speedNorm = constrain(speed / 0.6, 0, 1);
-      let spread = DIFFUSION.spreadSigma * (1 + (1 - speedNorm) * 1.2);
-
-      // Streams: number of filament groups scales with brushSize (increased for denser flow)
-      let streamCount = Math.max(24, Math.floor(map(brushSize, 8, 400, 24, 160)));
-      // Total droplets per call (distribute across streams + background) — greatly increased for heavy pours
-      let totalDroplets = Math.floor(map(brushSize, 8, 400, 4000, 15000));
-
-      // Allocate droplets to streams (majority) and background (minor)
-      let streamAllocation = Math.floor(totalDroplets * 0.78);
-      let backgroundAllocation = Math.max(40, totalDroplets - streamAllocation);
-
-      // For each stream, emit multiple micro-droplets along an elongated path
-      for (let s = 0; s < streamCount; s++) {
-        let ang = random(0, TWO_PI);
-        // origin offset so streams don't all start at exact center
-        let originOffset = randomGaussian() * (brushSize * 0.12);
-        let ox0 = x + cos(ang + PI/2) * originOffset;
-        let oy0 = y + sin(ang + PI/2) * originOffset;
-
-        // length scales with brushSize and speed (slower -> longer bleed)
-        let len = random(brushSize * 0.6, brushSize * 2.0) * (1 + (1 - speedNorm) * 0.9);
-        // droplets per stream proportional to len and brushSize
-        let dropletsPerStream = Math.max(6, Math.floor(map(len, brushSize * 0.6, brushSize * 2.0, 8, 48)));
-
-        for (let k = 0; k < dropletsPerStream; k++) {
-          let t = (k / dropletsPerStream) + random(-0.06, 0.06);
-          t = constrain(t, 0, 1);
-          // along-line position
-          let px = ox0 + cos(ang) * (t * len + random(-len * 0.06, len * 0.06));
-          let py = oy0 + sin(ang) * (t * len + random(-len * 0.06, len * 0.06));
-
-          // lateral jitter to create fine capillaries
-          px += randomGaussian() * spread * 0.16;
-          py += randomGaussian() * spread * 0.12;
-
-          // increase particle visual weight: scale sizes up so droplets occupy more area
-          // increase particle visual weight substantially to build large puddles per click
-          let psize = random(0.5, 3.0) * 200.0; // ~100-600px
-          // keep alpha low so large particles blend via many overlaps
-          let palpha = Math.floor(random(1, 5));
-
-          // slight color jitter per droplet
-          let col = baseCol;
-          if (Array.isArray(baseCol) && random() < 0.12) {
-            let hsl = rgbToHsl(baseCol[0], baseCol[1], baseCol[2]);
+      function drawCapillaries(gfx, cx, cy, baseSize, color, count) {
+        count = count || Math.floor(map(baseSize, 40, 400, 6, 20));
+        for (let i = 0; i < count; i++) {
+          let ang = random(0, TWO_PI);
+          let len = random(baseSize * 0.6, baseSize * 1.6) * (1 + random(-0.15, 0.3));
+          let midx = cx + cos(ang) * (len * 0.45 + random(-6, 6));
+          let midy = cy + sin(ang) * (len * 0.45 + random(-6, 6));
+          let thin = random(max(1, baseSize * 0.04), max(1.5, baseSize * 0.12));
+          let c = color;
+          if (Array.isArray(color)) {
+            let hsl = rgbToHsl(color[0], color[1], color[2]);
             hsl.h += random(-3, 3);
-            hsl.l = constrain(hsl.l + random(-3, 3), 2, 98);
+            hsl.l = constrain(hsl.l + random(-6, 4), 4, 96);
+            c = hslToRgb(hsl.h, hsl.s, hsl.l);
+          }
+          gfx.push();
+          gfx.translate(midx, midy);
+          gfx.rotate(ang + random(-0.15, 0.15));
+          gfx.noStroke();
+          if (Array.isArray(c)) gfx.fill(c[0], c[1], c[2], Math.floor(random(8, 28)));
+          else gfx.fill(c);
+          drawOrganicBlob(gfx, 0, 0, thin, c, 2, random(0.25, 0.6));
+          gfx.pop();
+        }
+      }
+
+      if (!usedBrush) {
+        artLayer.push();
+        artLayer.noStroke();
+        if (typeof artLayer.blendMode === 'function') artLayer.blendMode(MULTIPLY);
+
+        let baseCol = Array.isArray(chosenColor) ? chosenColor.slice() : null;
+        let speedNorm = constrain(speed / 0.6, 0, 1);
+        let spread = DIFFUSION.spreadSigma * (1 + (1 - speedNorm) * 1.2);
+
+        let streamCount = Math.max(24, Math.floor(map(brushSize, 8, 400, 24, 160)));
+        let totalDroplets = Math.floor(map(brushSize, 8, 400, 4000, 15000));
+
+        let streamAllocation = Math.floor(totalDroplets * 0.78);
+        let backgroundAllocation = Math.max(40, totalDroplets - streamAllocation);
+
+        for (let s = 0; s < streamCount; s++) {
+          let ang = random(0, TWO_PI);
+          let originOffset = randomGaussian() * (brushSize * 0.12);
+          let ox0 = x + cos(ang + PI/2) * originOffset;
+          let oy0 = y + sin(ang + PI/2) * originOffset;
+
+          let len = random(brushSize * 0.6, brushSize * 2.0) * (1 + (1 - speedNorm) * 0.9);
+          let dropletsPerStream = Math.max(6, Math.floor(map(len, brushSize * 0.6, brushSize * 2.0, 8, 48)));
+
+          for (let k = 0; k < dropletsPerStream; k++) {
+            let t = (k / dropletsPerStream) + random(-0.06, 0.06);
+            t = constrain(t, 0, 1);
+            let px = ox0 + cos(ang) * (t * len + random(-len * 0.06, len * 0.06));
+            let py = oy0 + sin(ang) * (t * len + random(-len * 0.06, len * 0.06));
+
+            px += randomGaussian() * spread * 0.16;
+            py += randomGaussian() * spread * 0.12;
+
+            let psize = random(0.5, 3.0) * 200.0;
+            let palpha = Math.floor(random(1, 5));
+
+            let col = baseCol;
+            if (Array.isArray(baseCol) && random() < 0.12) {
+              let hsl = rgbToHsl(baseCol[0], baseCol[1], baseCol[2]);
+              hsl.h += random(-3, 3);
+              hsl.l = constrain(hsl.l + random(-3, 3), 2, 98);
+              col = hslToRgb(hsl.h, hsl.s, hsl.l);
+            }
+
+            if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], palpha);
+            else artLayer.fill(col);
+            artLayer.ellipse(px, py, psize, psize);
+          }
+        }
+
+        for (let i = 0; i < backgroundAllocation; i++) {
+          let ox = randomGaussian() * spread * 1.0;
+          let oy = randomGaussian() * spread * 0.7;
+          let sz = random(0.4, 2.2) * 200.0;
+          let alpha = Math.floor(random(1, 5));
+          let col = baseCol;
+          if (Array.isArray(baseCol) && random() < 0.06) {
+            let hsl = rgbToHsl(baseCol[0], baseCol[1], baseCol[2]);
+            hsl.h += random(-2, 2);
             col = hslToRgb(hsl.h, hsl.s, hsl.l);
           }
-
-          if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], palpha);
+          if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], alpha);
           else artLayer.fill(col);
-          artLayer.ellipse(px, py, psize, psize);
+          artLayer.ellipse(x + ox, y + oy, sz, sz);
         }
+
+        if (baseCol) applyPigmentGrain(artLayer, x, y, spread * 0.9, baseCol);
+        applyPaperGrain(artLayer, x, y, spread * 0.9, baseCol || [0,0,0]);
+
+        artLayer.pop();
       }
+    },
 
-      // Background micro-dust to fill volume
-      for (let i = 0; i < backgroundAllocation; i++) {
-        let ox = randomGaussian() * spread * 1.0;
-        let oy = randomGaussian() * spread * 0.7;
-        // background dust scaled up to contribute to big soft volumes
-        let sz = random(0.4, 2.2) * 200.0; // ~80-440px
-        let alpha = Math.floor(random(1, 5));
-        let col = baseCol;
-        if (Array.isArray(baseCol) && random() < 0.06) {
-          let hsl = rgbToHsl(baseCol[0], baseCol[1], baseCol[2]);
-          hsl.h += random(-2, 2);
-          col = hslToRgb(hsl.h, hsl.s, hsl.l);
-        }
-        if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], alpha);
-        else artLayer.fill(col);
-        artLayer.ellipse(x + ox, y + oy, sz, sz);
+    // Template for the new style 'Particle Spray' — empty scaffold for future implementation.
+    'Particle Spray': function(letter, x, y, chosenColor) {
+      // TODO: implement 500 micro-droplets, fast linear feed ("3D-printer speed"), controlled spread
+      // This is intentionally left as a scaffold so experimental changes won't affect the stable preset.
+      if (!artLayer) return;
+      artLayer.push();
+      artLayer.noStroke();
+      // Minimal visual placeholder so switching styles is visible during development
+      if (Array.isArray(chosenColor)) artLayer.fill(chosenColor[0], chosenColor[1], chosenColor[2], 24);
+      else artLayer.fill(chosenColor || 'rgba(0,0,0,0.06)');
+      // A few quick tiny dots to indicate the style is active (will be replaced by 500 micro-droplets)
+      for (let i = 0; i < 12; i++) {
+        let rx = x + random(-6, 6);
+        let ry = y + random(-6, 6);
+        let s = random(1, 3);
+        artLayer.ellipse(rx, ry, s, s);
       }
-
-      // Texture overlays
-      if (baseCol) applyPigmentGrain(artLayer, x, y, spread * 0.9, baseCol);
-      applyPaperGrain(artLayer, x, y, spread * 0.9, baseCol || [0,0,0]);
-
       artLayer.pop();
     }
+  };
+
+  function executeInking(letter, x, y, chosenColor) {
+    if (!artLayer) return;
+    // Prefer window-managed current style, then DOM selector, fall back to Aether Soft
+    let styleName = 'Aether Soft';
+    try {
+      if (typeof window !== 'undefined' && window.currentFluidStyle) styleName = window.currentFluidStyle;
+      else if (typeof document !== 'undefined' && document.getElementById('styleSelector')) styleName = document.getElementById('styleSelector').value;
+    } catch (e) { styleName = 'Aether Soft'; }
+
+    let fn = (FLUID_STYLES && FLUID_STYLES[styleName]) ? FLUID_STYLES[styleName] : FLUID_STYLES['Aether Soft'];
+    try { fn(letter, x, y, chosenColor); } catch (err) { console.error('Fluid style error', err); }
   }
 
   return {
