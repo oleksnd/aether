@@ -4,8 +4,19 @@
 let gridCols, gridRows, gridMargin;
 let cellWidth, cellHeight;
 let gridOffsetX, gridOffsetY;
-let currentPath = [];
+let currentPaths = [];
 let highlightedCells = new Set();
+
+let wordColors = [
+  [100, 100, 100], // 1st word: neutral gray
+  [100, 150, 255], // 2nd: light blue
+  [255, 100, 100], // 3rd: light red
+  [100, 255, 100], // 4th: light green
+  [255, 200, 100], // 5th: light orange
+  [200, 100, 255], // 6th: light purple
+  [100, 255, 200], // 7th: light cyan
+  [255, 150, 150], // 8th: light pink
+];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -38,9 +49,9 @@ function draw() {
   // Redraw grid and letters
   drawGrid();
 
-  // Draw path if any
-  if (currentPath.length > 0) {
-    drawPath();
+  // Draw paths if any
+  if (currentPaths.length > 0) {
+    drawPaths();
   }
 
   // Highlight cells
@@ -81,57 +92,75 @@ function drawGrid() {
 }
 
 function parseInput(text) {
-  // Convert to uppercase
-  let upperText = text.toUpperCase();
-  // Remove non-A-Z characters
-  let cleanText = upperText.replace(/[^A-Z]/g, '');
-  // Return array of characters
-  return cleanText.split('');
+  // Remove punctuation (keep letters, spaces, numbers if any, but since A-Z, ok)
+  let clean = text.replace(/[^\w\s]/g, '');
+  // Split by spaces, filter out empty words
+  let words = clean.split(/\s+/).filter(word => word.length > 0);
+  // Convert each word to uppercase array of letters
+  return words.map(word => word.toUpperCase().split(''));
 }
 
 function startGeneration(text) {
-  // Parse the input
-  let letters = parseInput(text);
+  // Parse the input into words
+  let wordArrays = parseInput(text);
 
-  // Clear previous path and highlights
-  currentPath = [];
+  // Clear previous paths and highlights
+  currentPaths = [];
   highlightedCells.clear();
 
-  // For each letter, find its position
-  for (let letter of letters) {
-    if (ALPHABET_DNA[letter]) {
-      let index = ALPHABET_DNA[letter].zoneIndex;
-      let col = index % gridCols;
-      let row = Math.floor(index / gridCols);
-      let x = gridOffsetX + col * cellWidth + cellWidth / 2;
-      let y = gridOffsetY + row * cellHeight + cellHeight / 2;
-      currentPath.push({x, y});
-      highlightedCells.add(index);
+  let colorIndex = 0;
+  for (let word of wordArrays) {
+    let path = [];
+    for (let letter of word) {
+      if (ALPHABET_DNA[letter]) {
+        let index = ALPHABET_DNA[letter].zoneIndex;
+        let col = index % gridCols;
+        let row = Math.floor(index / gridCols);
+        let x = gridOffsetX + col * cellWidth + cellWidth / 2;
+        let y = gridOffsetY + row * cellHeight + cellHeight / 2;
+        path.push({x, y});
+        highlightedCells.add(index);
+      }
+    }
+    if (path.length > 0) {
+      currentPaths.push({points: path, color: wordColors[colorIndex % wordColors.length]});
+      colorIndex++;
     }
   }
 
-  // Redraw to show path and highlights
+  // Redraw to show paths and highlights
   redraw();
 }
 
-function drawPath() {
-  if (currentPath.length < 2) return;
+function drawPaths() {
+  let globalIndex = 0;
+  for (let pathObj of currentPaths) {
+    drawPathForWord(pathObj, globalIndex);
+    globalIndex += pathObj.points.length;
+  }
+}
 
-  stroke(100); // Gray
+function drawPathForWord(pathObj, startIndex) {
+  let points = pathObj.points;
+  let color = pathObj.color;
+
+  if (points.length < 2) return;
+
+  stroke(color);
   strokeWeight(1);
   noFill();
 
   // Draw dashed path
-  drawDashedPath(currentPath);
+  drawDashedPath(points);
 
-  // Draw arrows on each segment
-  drawArrows();
+  // Draw arrows
+  drawArrowsForPath(points, color);
 
-  // Draw start and end markers
-  drawMarkers();
+  // Draw markers
+  drawMarkersForPath(points, color);
 
-  // Draw step numbers
-  drawNumbers();
+  // Draw numbers
+  drawNumbersForPath(points, color, startIndex);
 }
 
 function drawDashedPath(points, dashLen = 5, gapLen = 5) {
@@ -171,14 +200,14 @@ function drawDashedLine(x1, y1, x2, y2, dashLen, gapLen) {
   }
 }
 
-function drawArrows() {
-  stroke(100);
+function drawArrowsForPath(points, color) {
+  stroke(color);
   strokeWeight(1);
-  fill(100);
+  fill(color);
 
-  for (let i = 0; i < currentPath.length - 1; i++) {
-    let start = currentPath[i];
-    let end = currentPath[i + 1];
+  for (let i = 0; i < points.length - 1; i++) {
+    let start = points[i];
+    let end = points[i + 1];
 
     // Midpoint
     let midX = (start.x + end.x) / 2;
@@ -202,35 +231,35 @@ function drawArrows() {
   }
 }
 
-function drawMarkers() {
-  if (currentPath.length === 0) return;
+function drawMarkersForPath(points, color) {
+  if (points.length === 0) return;
 
-  // Start marker: minimalist filled circle
-  let start = currentPath[0];
-  fill(100);
+  // Start marker: filled circle
+  let start = points[0];
+  fill(color);
   noStroke();
   ellipse(start.x, start.y, 12, 12);
 
-  // End marker: minimalist X
-  if (currentPath.length > 1) {
-    let end = currentPath[currentPath.length - 1];
-    stroke(100);
+  // End marker: X
+  if (points.length > 1) {
+    let end = points[points.length - 1];
+    stroke(color);
     strokeWeight(2);
     line(end.x - 6, end.y - 6, end.x + 6, end.y + 6);
     line(end.x + 6, end.y - 6, end.x - 6, end.y + 6);
   }
 }
 
-function drawNumbers() {
+function drawNumbersForPath(points, color, startIndex) {
   noStroke();
-  fill(100);
+  fill(color);
   textAlign(CENTER, CENTER);
   textSize(10);
 
-  for (let i = 0; i < currentPath.length; i++) {
-    let point = currentPath[i];
+  for (let i = 0; i < points.length; i++) {
+    let point = points[i];
     // Position slightly above and to the right of the center
-    text(i + 1, point.x + 12, point.y - 12);
+    text(startIndex + i + 1, point.x + 12, point.y - 12);
   }
 }
 
