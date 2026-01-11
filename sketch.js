@@ -7,6 +7,17 @@ let gridOffsetX, gridOffsetY;
 let currentPaths = [];
 let highlightedCells = new Set();
 
+let wordColors = [
+  [100, 100, 100], // 1st word: neutral gray
+  [100, 150, 255], // 2nd: light blue
+  [255, 100, 100], // 3rd: light red
+  [100, 255, 100], // 4th: light green
+  [255, 200, 100], // 5th: light orange
+  [200, 100, 255], // 6th: light purple
+  [100, 255, 200], // 7th: light cyan
+  [255, 150, 150], // 8th: light pink
+];
+
 let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.2, pauseUntil: 0 }; // Increased speed
 let currentWordIndex = 0;
 let currentPointIndex = 0;
@@ -18,13 +29,8 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   // Remove noLoop() to enable animation
 
-  // Set color mode to HSB
-  colorMode(HSB);
-
   // Create isolated art layer
   artLayer = createGraphics(width, height);
-  artLayer.colorMode(HSB);
-  artLayer.blendMode(MULTIPLY);
 
   // Set font
   textFont('Courier');
@@ -157,14 +163,7 @@ function startGeneration(text) {
       }
     }
     if (path.length > 0) {
-      // Generate word color based on first letter's hue range
-      let firstLetter = word[0];
-      let hueRange = ALPHABET_DNA[firstLetter].hueRange;
-      let wordHue = random(hueRange[0], hueRange[1]);
-      let wordColor = color(wordHue, GRID_CONFIG.SATURATION, GRID_CONFIG.BRIGHTNESS);
-      console.log("Слово: [" + word.join('') + "], Первая буква: [" + firstLetter + "], Выбранный Hue: [" + wordHue + "]");
-      currentPaths.push({points: path, color: wordColor});
-      console.log("Pushing path with hue " + hue(wordColor));
+      currentPaths.push({points: path, color: wordColors[colorIndex % wordColors.length]});
       colorIndex++;
     }
   }
@@ -197,29 +196,26 @@ function setTargetToCurrent() {
 }
 
 function updateNozzle() {
-  try {
-    if (nozzle.isMoving) {
-      nozzle.x = lerp(nozzle.x, nozzle.targetX, nozzle.speed);
-      nozzle.y = lerp(nozzle.y, nozzle.targetY, nozzle.speed);
-      if (dist(nozzle.x, nozzle.y, nozzle.targetX, nozzle.targetY) < 1) {
-        nozzle.x = nozzle.targetX;
-        nozzle.y = nozzle.targetY;
-        nozzle.isMoving = false;
-        // Add to visited
-        let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
-        visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
-        // Execute inking hook
-        executeInking(currentPoint.letter, nozzle.x, nozzle.y, hue(currentPaths[currentWordIndex].color));
-        nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
-      }
-    } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
-      currentPointIndex++;
-      setTargetToCurrent();
+  if (nozzle.isMoving) {
+    nozzle.x = lerp(nozzle.x, nozzle.targetX, nozzle.speed);
+    nozzle.y = lerp(nozzle.y, nozzle.targetY, nozzle.speed);
+    if (dist(nozzle.x, nozzle.y, nozzle.targetX, nozzle.targetY) < 1) {
+      nozzle.x = nozzle.targetX;
+      nozzle.y = nozzle.targetY;
+      nozzle.isMoving = false;
+      // Add to visited
+      let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
+      visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
+      // Execute inking hook
+      executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].color);
+      nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
     }
-  } catch (e) {
-    console.error("Nozzle update error:", e);
+  } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
+    currentPointIndex++;
+    setTargetToCurrent();
   }
 }
+
 function drawCompletedWords() {
   let globalIndex = 0;
   for (let i = 0; i < currentWordIndex; i++) {
@@ -461,18 +457,7 @@ function highlightCells() {
   }
 }
 
-function executeInking(char, x, y, hueValue) {
-  artLayer.push();
-  // Use passed hueValue directly
-  artLayer.colorMode(HSB, 360, 100, 100, 100);
-  artLayer.noStroke();
-
-  // Draw soft spot: Hue from params, Sat 80, Bri 100, Alpha 15
-  artLayer.fill(hueValue, 80, 100, 15);
-  artLayer.ellipse(x, y, random(35, 55));
-
-  // Add slightly denser core for texture
-  artLayer.fill(hueValue, 90, 100, 20);
-  artLayer.ellipse(x, y, random(15, 25));
-  artLayer.pop();
+function executeInking(letter, x, y, color) {
+  // Hook for future watercolor inking
+  console.log("Впрыск краски для буквы: " + letter + " at (" + x + ", " + y + ") with color " + color);
 }
