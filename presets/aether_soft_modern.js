@@ -154,6 +154,13 @@
             artLayer.ellipse(x, y, blobSize * 1.4, blobSize * 1.4);
           }
         } catch (e) { /* non-fatal */ }
+        // Stronger visible fallback: draw a semi-opaque ellipse to ensure the preset always shows marks
+        try {
+          let visAlpha = 120;
+          if (Array.isArray(baseCol)) artLayer.fill(baseCol[0], baseCol[1], baseCol[2], visAlpha);
+          else artLayer.fill(60, 60, 60, visAlpha);
+          artLayer.ellipse(x, y, Math.max(12, brushSize * 0.9), Math.max(12, brushSize * 0.9));
+        } catch (e) { /* ignore */ }
         let speedNorm = constrain(speed / 0.6, 0, 1);
         let spread = DIFFUSION.spreadSigma * (1 + (1 - speedNorm) * 1.2);
 
