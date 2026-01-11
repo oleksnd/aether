@@ -11,6 +11,9 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   noLoop(); // Static drawing, redraw only when needed
 
+  // Set font
+  textFont('Courier');
+
   // Load grid config
   gridCols = GRID_CONFIG.COLS;
   gridRows = GRID_CONFIG.ROWS;
@@ -45,7 +48,7 @@ function draw() {
 }
 
 function drawGrid() {
-  stroke(200); // Light gray
+  stroke(240); // Very light gray
   strokeWeight(1);
   noFill();
 
@@ -63,8 +66,8 @@ function drawGrid() {
 
   // Draw letters in centers
   textAlign(CENTER, CENTER);
-  textSize(20);
-  fill(100);
+  textSize(16);
+  fill(150); // Light gray, quiet
   noStroke();
 
   for (let index = 0; index < 26; index++) {
@@ -114,15 +117,12 @@ function startGeneration(text) {
 function drawPath() {
   if (currentPath.length < 2) return;
 
-  stroke(0, 100, 200); // Blue line
-  strokeWeight(3);
+  stroke(100); // Gray
+  strokeWeight(1);
   noFill();
 
-  beginShape();
-  for (let point of currentPath) {
-    vertex(point.x, point.y);
-  }
-  endShape();
+  // Draw dashed path
+  drawDashedPath(currentPath);
 
   // Draw arrows on each segment
   drawArrows();
@@ -134,10 +134,47 @@ function drawPath() {
   drawNumbers();
 }
 
+function drawDashedPath(points, dashLen = 5, gapLen = 5) {
+  for (let i = 0; i < points.length - 1; i++) {
+    drawDashedLine(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, dashLen, gapLen);
+  }
+}
+
+function drawDashedLine(x1, y1, x2, y2, dashLen, gapLen) {
+  let dx = x2 - x1;
+  let dy = y2 - y1;
+  let dist = sqrt(dx * dx + dy * dy);
+  if (dist === 0) return;
+
+  let stepLen = dashLen + gapLen;
+  let steps = dist / stepLen;
+  let unitX = dx / dist;
+  let unitY = dy / dist;
+
+  for (let i = 0; i < steps; i++) {
+    let startX = x1 + i * stepLen * unitX;
+    let startY = y1 + i * stepLen * unitY;
+    let endX = startX + dashLen * unitX;
+    let endY = startY + dashLen * unitY;
+
+    // Clamp to end
+    if ((unitX > 0 && endX > x2) || (unitX < 0 && endX < x2)) {
+      endX = x2;
+      endY = y2;
+    }
+    if ((unitY > 0 && endY > y2) || (unitY < 0 && endY < y2)) {
+      endX = x2;
+      endY = y2;
+    }
+
+    line(startX, startY, endX, endY);
+  }
+}
+
 function drawArrows() {
-  stroke(0, 100, 200);
-  strokeWeight(2);
-  fill(0, 100, 200);
+  stroke(100);
+  strokeWeight(1);
+  fill(100);
 
   for (let i = 0; i < currentPath.length - 1; i++) {
     let start = currentPath[i];
@@ -152,9 +189,9 @@ function drawArrows() {
     let dy = end.y - start.y;
     let angle = atan2(dy, dx);
 
-    // Arrow size (increased for clarity)
-    let arrowLength = 20;
-    let arrowWidth = 8;
+    // Arrow size (thinner)
+    let arrowLength = 15;
+    let arrowWidth = 5;
 
     // Draw arrowhead as triangle
     push();
@@ -168,38 +205,38 @@ function drawArrows() {
 function drawMarkers() {
   if (currentPath.length === 0) return;
 
-  // Start marker: bold filled circle in center of first cell
+  // Start marker: minimalist filled circle
   let start = currentPath[0];
-  fill(0, 150, 255);
+  fill(100);
   noStroke();
-  ellipse(start.x, start.y, 20, 20);
+  ellipse(start.x, start.y, 12, 12);
 
-  // End marker: clear X in center of last cell
+  // End marker: minimalist X
   if (currentPath.length > 1) {
     let end = currentPath[currentPath.length - 1];
-    stroke(255, 0, 0);
-    strokeWeight(4);
-    line(end.x - 10, end.y - 10, end.x + 10, end.y + 10);
-    line(end.x + 10, end.y - 10, end.x - 10, end.y + 10);
+    stroke(100);
+    strokeWeight(2);
+    line(end.x - 6, end.y - 6, end.x + 6, end.y + 6);
+    line(end.x + 6, end.y - 6, end.x - 6, end.y + 6);
   }
 }
 
 function drawNumbers() {
   noStroke();
-  fill(0);
+  fill(100);
   textAlign(CENTER, CENTER);
-  textSize(12);
+  textSize(10);
 
   for (let i = 0; i < currentPath.length; i++) {
     let point = currentPath[i];
     // Position slightly above and to the right of the center
-    text(i + 1, point.x + 15, point.y - 15);
+    text(i + 1, point.x + 12, point.y - 12);
   }
 }
 
 function highlightCells() {
   noStroke();
-  fill(200, 200, 255, 100); // Light blue with transparency
+  fill(220, 220, 220, 50); // Neutral light gray, barely noticeable
 
   for (let index of highlightedCells) {
     let col = index % gridCols;
