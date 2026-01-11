@@ -157,6 +157,7 @@ function startGeneration(text) {
       let hueRange = ALPHABET_DNA[firstLetter].hueRange;
       let wordHue = random(hueRange[0], hueRange[1]);
       let wordColor = color(wordHue, GRID_CONFIG.SATURATION, GRID_CONFIG.BRIGHTNESS);
+      console.log("Слово: [" + word.join('') + "], Первая буква: [" + firstLetter + "], Выбранный Hue: [" + wordHue + "]");
       currentPaths.push({points: path, color: wordColor});
       colorIndex++;
     }
@@ -213,6 +214,7 @@ function updateNozzle() {
 function drawCompletedWords() {
   let globalIndex = 0;
   for (let i = 0; i < currentWordIndex; i++) {
+    console.log("Drawing completed word " + i + " with hue " + hue(currentPaths[i].color));
     drawPathForWord(currentPaths[i], globalIndex);
     globalIndex += currentPaths[i].points.length;
   }
@@ -221,6 +223,7 @@ function drawCompletedWords() {
 function drawCurrentTrail() {
   if (currentWordIndex < currentPaths.length) {
     let word = currentPaths[currentWordIndex];
+    console.log("Drawing current word with hue " + hue(word.color));
     let color = word.color;
     stroke(color);
     strokeWeight(1);
