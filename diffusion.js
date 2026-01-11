@@ -328,6 +328,8 @@ const Fluid = (function(){
       else if (typeof document !== 'undefined' && document.getElementById('styleSelector')) styleName = document.getElementById('styleSelector').value;
     } catch (e) { styleName = 'Aether Soft'; }
 
+    console.log('[Fluid] requested style:', styleName, 'letter:', letter, 'pos:', x, y);
+
     // If style hasn't been materialized yet but a factory exists, bind it with internal api
     if (!FLUID_STYLES[styleName] && FLUID_PRESET_FACTORIES[styleName]) {
       try {
@@ -343,14 +345,28 @@ const Fluid = (function(){
         };
         const factory = FLUID_PRESET_FACTORIES[styleName];
         const fn = factory(api);
-        if (typeof fn === 'function') FLUID_STYLES[styleName] = fn;
+        if (typeof fn === 'function') {
+          FLUID_STYLES[styleName] = fn;
+          console.log('[Fluid] preset initialized:', styleName);
+        } else {
+          console.warn('[Fluid] preset factory did not return a function for', styleName);
+        }
       } catch (e) {
         console.error('Failed to initialize fluid preset', styleName, e);
       }
     }
 
     let fn = (FLUID_STYLES && FLUID_STYLES[styleName]) ? FLUID_STYLES[styleName] : FLUID_STYLES['Aether Soft'];
-    try { if (fn) fn(letter, x, y, chosenColor); } catch (err) { console.error('Fluid style error', err); }
+    if (!fn) {
+      console.error('[Fluid] No inking function found for style', styleName);
+      return;
+    }
+    try {
+      fn(letter, x, y, chosenColor);
+      console.log('[Fluid] executed inking for', styleName, 'at', x, y);
+    } catch (err) {
+      console.error('Fluid style error', err);
+    }
   }
 
   return {

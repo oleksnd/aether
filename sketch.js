@@ -75,6 +75,7 @@ function setup() {
       window.currentFluidStyle = styleSel.value;
       styleSel.addEventListener('change', (e) => {
         window.currentFluidStyle = e.target.value;
+        try { console.log('[UI] fluid style changed ->', window.currentFluidStyle); } catch (e) {}
       });
     }
   } catch (e) { /* ignore in non-browser contexts */ }

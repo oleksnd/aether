@@ -16,6 +16,9 @@
     return function(letter, x, y, chosenColor) {
       if (!artLayer) return;
 
+      // Debug log to help diagnose why Modern may not be painting
+      try { console.log('[Aether Soft Modern] called for', letter, {x, y}, 'color=', chosenColor); } catch (e) {}
+
       // Start with same behavior as Aether Soft — kept separate so we can tweak later.
       let now = millis();
       let distFromLast = (lastInk.x === null) ? Infinity : dist(x, y, lastInk.x, lastInk.y);
@@ -161,6 +164,8 @@
           else artLayer.fill(60, 60, 60, visAlpha);
           artLayer.ellipse(x, y, Math.max(12, brushSize * 0.9), Math.max(12, brushSize * 0.9));
         } catch (e) { /* ignore */ }
+
+        try { console.log('[Aether Soft Modern] drew fallback blob at', x, y, 'brushSize=', brushSize); } catch (e) {}
         let speedNorm = constrain(speed / 0.6, 0, 1);
         let spread = DIFFUSION.spreadSigma * (1 + (1 - speedNorm) * 1.2);
 
