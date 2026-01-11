@@ -22,23 +22,7 @@ let nozzle = { x: 0, y: 0, targetX: 0, targetY: 0, isMoving: false, speed: 0.2, 
 let currentWordIndex = 0;
 let currentPointIndex = 0;
 
-// Temporary fluid palette (step 7): red, yellow, blue (RGB arrays)
-const FLUID_PALETTE = [
-  [255, 50, 50],
-  [255, 200, 0],
-  [50, 50, 255]
-];
-
-// Diffusion engine parameters
-const DIFFUSION = {
-  particlesMin: 5,
-  particlesMax: 10,
-  spreadSigma: 15,
-  sizeMin: 2,
-  sizeMax: 15,
-  alphaMin: 5,
-  alphaMax: 10
-};
+// Fluid drawing moved to `diffusion.js`. Use `Fluid.pickColor()` and `Fluid.executeInking()` for ink behavior.
 
 let visitedPoints = []; // Track visited points for current word
 
@@ -50,8 +34,8 @@ function setup() {
 
   // Create isolated art layer
   artLayer = createGraphics(width, height);
-  // Use multiply blending so overlapping low-alpha particles intensify color
-  artLayer.blendMode(MULTIPLY);
+  // Initialize Fluid module with the art layer (module sets blend mode internally)
+  if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
 
   // Set font
   textFont('Courier');
@@ -184,8 +168,8 @@ function startGeneration(text) {
       }
     }
     if (path.length > 0) {
-      // pick a fluid color for this word from the temporary palette
-      let fluidCol = FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))];
+      // pick a fluid color for this word from the Fluid module (safe fallback)
+      let fluidCol = (typeof Fluid !== 'undefined' && Fluid.pickColor) ? Fluid.pickColor() : [255, 50, 50];
       currentPaths.push({points: path, color: wordColors[colorIndex % wordColors.length], fluidColor: fluidCol});
       colorIndex++;
     }
@@ -229,8 +213,10 @@ function updateNozzle() {
       // Add to visited
       let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
       visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
-      // Execute inking hook
-      executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].fluidColor);
+      // Execute inking hook (delegated to Fluid module)
+      if (typeof Fluid !== 'undefined' && Fluid.executeInking) {
+        Fluid.executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].fluidColor);
+      }
       nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
     }
   } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
@@ -480,39 +466,4 @@ function highlightCells() {
   }
 }
 
-function executeInking(letter, x, y, chosenColor) {
-  // Fluid diffusion: paint many low-alpha particles on artLayer
-  artLayer.push();
-  artLayer.noStroke();
-
-  // Determine particle count for this ink event
-  let particleCount = Math.floor(random(DIFFUSION.particlesMin, DIFFUSION.particlesMax + 1));
-
-  for (let i = 0; i < particleCount; i++) {
-    // Gaussian spread so most particles stay near the center with some outliers
-    let offsetX = randomGaussian(0, DIFFUSION.spreadSigma);
-    let offsetY = randomGaussian(0, DIFFUSION.spreadSigma);
-    let size = random(DIFFUSION.sizeMin, DIFFUSION.sizeMax);
-    let alpha = Math.floor(random(DIFFUSION.alphaMin, DIFFUSION.alphaMax + 1));
-
-    if (Array.isArray(chosenColor)) {
-      let [r, g, b] = chosenColor;
-      artLayer.fill(r, g, b, alpha);
-    } else {
-      // Fallback: accept CSS color strings (less ideal for alpha control)
-      artLayer.fill(chosenColor);
-    }
-
-    artLayer.ellipse(x + offsetX, y + offsetY, size, size);
-  }
-
-  // Occasional larger splash for variety
-  if (random() < 0.15) {
-    let splashSize = random(20, 60);
-    let alpha = Math.floor(random(DIFFUSION.alphaMin, DIFFUSION.alphaMax + 3));
-    if (Array.isArray(chosenColor)) artLayer.fill(chosenColor[0], chosenColor[1], chosenColor[2], alpha);
-    artLayer.ellipse(x + randomGaussian(0, DIFFUSION.spreadSigma * 2), y + randomGaussian(0, DIFFUSION.spreadSigma * 2), splashSize, splashSize * 0.6);
-  }
-
-  artLayer.pop();
-}
+// `executeInking` implementation moved to `diffusion.js` (use `Fluid.executeInking`)
