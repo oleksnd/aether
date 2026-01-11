@@ -59,6 +59,10 @@ const Fluid = (function(){
     noiseScale: 0.008,
     noiseAmpFactor: 0.16,
 
+    // Subdivision & deformation (Tyler Hobbs style)
+    subdivideIterations: 3,
+    subdivideDispFactor: 0.32,
+
     // Accumulation of alpha when nozzle lingers
     accumulationRate: 4, // alpha per millisecond of linger influence factor
     maxAccumAlpha: 200,
@@ -155,52 +159,80 @@ const Fluid = (function(){
     return FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))];
   }
 
-  // Draw an organic, noise-displaced blob with multiple layered fills for soft edges
+  // Recursive subdivision + deformation of a polygon contour (Tyler Hobbs style)
+  function subdivideDeform(points, iterations, dispScale, noiseScale) {
+    for (let it = 0; it < iterations; it++) {
+      let newPts = [];
+      for (let i = 0; i < points.length; i++) {
+        let a = points[i];
+        let b = points[(i + 1) % points.length];
+        newPts.push(a);
+
+        // midpoint
+        let mx = (a.x + b.x) / 2;
+        let my = (a.y + b.y) / 2;
+
+        // edge normal
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let len = sqrt(dx * dx + dy * dy) || 1;
+        let nx = -dy / len;
+        let ny = dx / len;
+
+        // noise-driven displacement along normal
+        let n = noise(mx * noiseScale, my * noiseScale, it * 0.12);
+        let disp = map(n, 0, 1, -dispScale, dispScale);
+        // small random component to break tiling
+        disp += randomGaussian() * (dispScale * 0.08);
+
+        let mx2 = mx + nx * disp;
+        let my2 = my + ny * disp;
+
+        newPts.push({ x: mx2, y: my2 });
+      }
+      points = newPts;
+      dispScale *= 0.55; // reduce displacement each iteration
+    }
+    return points;
+  }
+
+  // Draw an organic, noise-deformed blob using recursive subdivision for smooth torn edges
   // Returns the approximate outer radius used (for grain/fringe calculations)
   function drawOrganicBlob(gfx, cx, cy, baseRadius, color, layers = 4, verticalSquash = 0.75) {
     let outerRadius = 0;
 
     for (let layer = layers; layer >= 1; layer--) {
-      // Layer radius increases outwards
       let radius = baseRadius * (1 + layer * 0.18);
       outerRadius = max(outerRadius, radius);
 
-      // t acts as a layer strength metric (0..1)
       let t = layer / layers;
-
-      // Alpha per layer: outermost very soft, inner denser
       let alpha = Math.floor(map(t, 0, 1, DIFFUSION.baseAlphaMin, DIFFUSION.baseAlphaMax) * (0.8 + t * 0.6));
+      if (lastInk && lastInk.alpha) alpha = Math.min(255, Math.floor(alpha + lastInk.alpha * t));
 
-      // Apply accumulation effect if present (lastInk.alpha) by multiplying
-      if (lastInk && lastInk.alpha) {
-        alpha = Math.min(255, Math.floor(alpha + lastInk.alpha * (t)));
-      }
+      if (Array.isArray(color)) gfx.fill(color[0], color[1], color[2], alpha);
+      else gfx.fill(color);
 
-      if (Array.isArray(color)) {
-        gfx.fill(color[0], color[1], color[2], alpha);
-      } else {
-        gfx.fill(color);
-      }
-
-      // Create noise-displaced polygon (ragged edges) using Perlin noise for organic look
-      gfx.beginShape();
+      // create initial circular polygon
+      let pts = [];
       for (let i = 0; i < DIFFUSION.shapeVertices; i++) {
         let ang = map(i, 0, DIFFUSION.shapeVertices, 0, TWO_PI);
-        // Noise-based radial displacement
-        let nx = cx * DIFFUSION.noiseScale + cos(ang) * 0.23;
-        let ny = cy * DIFFUSION.noiseScale + sin(ang) * 0.23;
-        let n = noise(nx, ny, layer * 0.1);
-        let noiseAmp = radius * DIFFUSION.noiseAmpFactor * (1 - t * 0.35); // outer layers can be slightly smoother
-        let radialNoise = map(n, 0, 1, -noiseAmp, noiseAmp);
-
-        // Small additional jitter for micro-roughness
-        radialNoise += randomGaussian() * (radius * 0.02);
-
-        let r = radius + radialNoise;
-        let vx = cx + cos(ang) * r;
-        let vy = cy + sin(ang) * r * verticalSquash;
-        gfx.vertex(vx, vy);
+        let px = cx + cos(ang) * radius;
+        let py = cy + sin(ang) * radius * verticalSquash;
+        pts.push({ x: px, y: py });
       }
+
+      // subdivide + deform the polygon
+      let dispScale = radius * DIFFUSION.subdivideDispFactor;
+      let noiseScale = DIFFUSION.noiseScale * (0.6 + (1 - t) * 0.6);
+      let finalPts = subdivideDeform(pts, DIFFUSION.subdivideIterations, dispScale, noiseScale);
+
+      // draw shape (smooth with curveVertex)
+      gfx.beginShape();
+      // duplicate first points for curve smoothness
+      let wrap = 3;
+      for (let w = finalPts.length - wrap; w < finalPts.length; w++) gfx.curveVertex(finalPts[w].x, finalPts[w].y);
+      for (let p of finalPts) gfx.curveVertex(p.x, p.y);
+      for (let w = 0; w < wrap; w++) gfx.curveVertex(finalPts[w].x, finalPts[w].y);
       gfx.endShape(CLOSE);
     }
 
