@@ -20,6 +20,7 @@ function setup() {
 
   // Create isolated art layer
   artLayer = createGraphics(width, height);
+  artLayer.blendMode(MULTIPLY);
 
   // Set font
   textFont('Courier');
@@ -159,6 +160,7 @@ function startGeneration(text) {
       let wordColor = color(wordHue, GRID_CONFIG.SATURATION, GRID_CONFIG.BRIGHTNESS);
       console.log("Слово: [" + word.join('') + "], Первая буква: [" + firstLetter + "], Выбранный Hue: [" + wordHue + "]");
       currentPaths.push({points: path, color: wordColor});
+      console.log("Pushing path with hue " + hue(wordColor));
       colorIndex++;
     }
   }
@@ -457,4 +459,13 @@ function highlightCells() {
 function executeInking(letter, x, y, wordColor) {
   // Hook for future watercolor inking
   console.log("Впрыск краски для буквы: " + letter + " at (" + x + ", " + y + ") with hue " + hue(wordColor));
+
+  // Draw watercolor spot
+  artLayer.push();
+  artLayer.noStroke();
+  let c = wordColor.copy();
+  c.setAlpha(20);
+  artLayer.fill(c);
+  artLayer.ellipse(x, y, random(35, 55));
+  artLayer.pop();
 }
