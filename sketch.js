@@ -123,6 +123,69 @@ function drawPath() {
     vertex(point.x, point.y);
   }
   endShape();
+
+  // Draw arrows on each segment
+  drawArrows();
+
+  // Draw start and end markers
+  drawMarkers();
+}
+
+function drawArrows() {
+  stroke(0, 100, 200);
+  strokeWeight(2);
+  fill(0, 100, 200);
+
+  for (let i = 0; i < currentPath.length - 1; i++) {
+    let start = currentPath[i];
+    let end = currentPath[i + 1];
+
+    // Midpoint
+    let midX = (start.x + end.x) / 2;
+    let midY = (start.y + end.y) / 2;
+
+    // Direction vector
+    let dx = end.x - start.x;
+    let dy = end.y - start.y;
+    let angle = atan2(dy, dx);
+
+    // Arrow size
+    let arrowLength = 15;
+    let arrowWidth = 6;
+
+    // Draw arrowhead as triangle
+    push();
+    translate(midX, midY);
+    rotate(angle);
+    triangle(0, 0, -arrowLength, -arrowWidth / 2, -arrowLength, arrowWidth / 2);
+    pop();
+
+    // Draw number next to arrow
+    noStroke();
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(12);
+    text(i + 1, midX + cos(angle) * 20, midY + sin(angle) * 20); // Offset along the direction
+  }
+}
+
+function drawMarkers() {
+  if (currentPath.length === 0) return;
+
+  // Start marker: larger circle
+  let start = currentPath[0];
+  fill(0, 150, 255);
+  noStroke();
+  ellipse(start.x, start.y, 15, 15);
+
+  // End marker: X
+  if (currentPath.length > 1) {
+    let end = currentPath[currentPath.length - 1];
+    stroke(255, 0, 0);
+    strokeWeight(3);
+    line(end.x - 8, end.y - 8, end.x + 8, end.y + 8);
+    line(end.x + 8, end.y - 8, end.x - 8, end.y + 8);
+  }
 }
 
 function highlightCells() {
