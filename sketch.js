@@ -225,7 +225,8 @@ function startGeneration(text) {
       // pick a fluid color for this word from the Fluid module (safe fallback)
       let fluidCol = null;
       try {
-        if (typeof Fluid !== 'undefined' && typeof Fluid.pickColorDistinct === 'function' && window.currentFluidStyle === 'Aether Soft Modern') {
+        if (typeof Fluid !== 'undefined' && typeof Fluid.pickColorDistinct === 'function') {
+          // Use distinct color selection when available (applies to Aether Soft and Modern)
           fluidCol = Fluid.pickColorDistinct(usedFluidColors);
           // record used color as a simple array copy
           if (Array.isArray(fluidCol)) usedFluidColors.push(fluidCol.slice());
