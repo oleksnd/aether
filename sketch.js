@@ -28,6 +28,32 @@ let visitedPoints = []; // Track visited points for current word
 
 let artLayer; // Isolated art layer for watercolor
 
+// Dynamically load gl-matrix then p5.brush so runtime errors (like missing mat4) are avoidable
+function loadBrushes(layer) {
+  if (window.p5BrushLoaded || window.Brush || window.p5Brush || window.P5Brush) return Promise.resolve();
+
+  function loadScript(src) {
+    return new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+  }
+
+  return loadScript('https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js')
+    .then(() => loadScript('https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js'))
+    .then(() => {
+      try {
+        if (window.p5Brush && typeof window.p5Brush.init === 'function') window.p5Brush.init(layer);
+        if (window.Brush && typeof window.Brush.init === 'function') window.Brush.init(layer);
+      } catch (e) { /* ignore */ }
+      window.p5BrushLoaded = true;
+    });
+}
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   // Remove noLoop() to enable animation
@@ -36,6 +62,9 @@ function setup() {
   artLayer = createGraphics(width, height);
   // Initialize Fluid module with the art layer (module sets blend mode internally)
   if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
+
+  // Load brush libraries (gl-matrix, p5.brush) asynchronously and init against artLayer
+  loadBrushes(artLayer).catch(() => { /* non-fatal: fallback rendering will be used */ });
 
   // Set font
   textFont('Courier');

@@ -242,13 +242,12 @@ const Fluid = (function(){
   function executeInking(letter, x, y, chosenColor) {
     if (!artLayer) return;
 
-    // Accumulation: if nozzle is near the previous ink point and time gap is small, grow the puddle
+    // accumulation and timing (retain some of the previous behavior)
     let now = millis();
     let distFromLast = (lastInk.x === null) ? Infinity : dist(x, y, lastInk.x, lastInk.y);
     let dt = (lastInk.time) ? (now - lastInk.time) : 0;
 
     if (distFromLast < 20 && dt < 900) {
-      // grow existing puddle and alpha accumulation proportional to linger time
       lastInk.size = Math.min(DIFFUSION.basePuddleMaxCap, lastInk.size + DIFFUSION.basePuddleGrowthRate);
       let alphaInc = Math.floor(DIFFUSION.accumulationRate * (dt / 100));
       lastInk.alpha = Math.min(DIFFUSION.maxAccumAlpha, (lastInk.alpha || 0) + alphaInc);
@@ -256,7 +255,6 @@ const Fluid = (function(){
       lastInk.x = x;
       lastInk.y = y;
     } else {
-      // new puddle: initialize alpha and size
       lastInk.size = random(DIFFUSION.basePuddleMin, DIFFUSION.basePuddleMax);
       lastInk.alpha = Math.floor(random(DIFFUSION.baseAlphaMin, DIFFUSION.baseAlphaMin * 2));
       lastInk.time = now;
@@ -264,84 +262,95 @@ const Fluid = (function(){
       lastInk.y = y;
     }
 
-    artLayer.push();
-    artLayer.noStroke();
+    // Compute speed-based size modifier (larger when nozzle was moving faster)
+    let speed = dt > 0 ? (distFromLast / dt) : 0;
+    let speedFactor = map(constrain(speed, 0, 2), 0, 2, 0.7, 1.6);
+    let brushSize = lastInk.size * speedFactor * random(0.85, 1.25);
 
-    // Use blur while drawing base puddle and inner cloud to soften edges
-    if (artLayer.drawingContext && typeof artLayer.drawingContext.filter !== 'undefined') {
-      artLayer.drawingContext.filter = `blur(${DIFFUSION.blurPx}px)`;
-    }
+    // Preferred path: use p5.brush API when available
+    let usedBrush = false;
+    try {
+      // try common global entrypoints for the library
+      let BrushClass = window.Brush || window.P5Brush || window.p5Brush || (window.p5 && window.p5.Brush);
 
-    // Base puddle: a few layered organic shapes (very soft). Capture outer radius
-    let outerA = drawOrganicBlob(artLayer, x + random(-8, 8), y + random(-6, 6), lastInk.size, chosenColor, 4, 0.8);
+      if (BrushClass) {
+        // create an instance per-call if not persistent (safe). Prefer constructors that accept a graphics target.
+        let brushInstance = null;
+        try {
+          // common constructor signatures attempted
+          if (typeof BrushClass === 'function') {
+            try { brushInstance = new BrushClass(artLayer); } catch (e) { /* ignore */ }
+            if (!brushInstance && typeof BrushClass.create === 'function') brushInstance = BrushClass.create(artLayer);
+          }
+          if (!brushInstance && typeof window.p5Brush === 'object' && typeof window.p5Brush.createBrush === 'function') {
+            brushInstance = window.p5Brush.createBrush(artLayer);
+          }
+        } catch (e) { brushInstance = null; }
 
-    // Inner core: smaller but denser blob to create concentrated center
-    let outerB = drawOrganicBlob(artLayer, x + random(-6, 6), y + random(-4, 4), lastInk.size * 0.45, chosenColor, 3, 0.85);
+        if (brushInstance) {
+          // Configure a wet watercolor-like stroke if API supports options
+          let rgba = null;
+          if (Array.isArray(chosenColor)) rgba = `rgba(${chosenColor[0]},${chosenColor[1]},${chosenColor[2]},${(lastInk.alpha||DIFFUSION.baseAlphaMax)/255})`;
+          else rgba = chosenColor;
 
-    let puddleOuter = max(outerA, outerB);
+          let opts = {
+            color: rgba,
+            size: brushSize,
+            wetness: 0.9,
+            spread: 0.85,
+            bleed: 0.9,
+            scattering: 0.15,
+            blend: 'multiply'
+          };
 
-    // Turn off blur for splatter texture and fine details (grain, fringe, highlights)
-    if (artLayer.drawingContext && typeof artLayer.drawingContext.filter !== 'undefined') {
-      artLayer.drawingContext.filter = 'none';
-    }
-
-    // Add pigment grain across the puddle to create textured pigment behavior
-    applyPigmentGrain(artLayer, x, y, puddleOuter, chosenColor);
-
-    // Wet-edge fringe (subtle darker ring)
-    drawFringe(artLayer, x, y, puddleOuter, chosenColor);
-
-    // Subtle bright 'wet' highlights in the core
-    applyHighlights(artLayer, x, y, lastInk.size);
-
-    // Dense cloud of smaller organic droplets around the puddle (allows blending)
-    let particleCount = Math.floor(random(DIFFUSION.particlesMin, DIFFUSION.particlesMax + 1));
-    let innerSigma = DIFFUSION.spreadSigma * DIFFUSION.innerSigmaFactor;
-
-    for (let i = 0; i < particleCount; i++) {
-      // bias horizontal spread slightly more than vertical to imitate floor puddles
-      let offsetX = randomGaussian(0, innerSigma) * 1.0;
-      let offsetY = randomGaussian(0, innerSigma) * 0.65;
-      let size = random(DIFFUSION.sizeMin, DIFFUSION.sizeMax * 0.5);
-      let alpha = Math.floor(random(DIFFUSION.splashAlphaMin * 0.25, DIFFUSION.splashAlphaMax * 0.25));
-
-      if (Array.isArray(chosenColor)) artLayer.fill(chosenColor[0], chosenColor[1], chosenColor[2], alpha);
-      else artLayer.fill(chosenColor);
-
-      drawOrganicBlob(artLayer, x + offsetX, y + offsetY, size * random(0.8, 1.4), chosenColor, 2, 0.85);
-    }
-
-    // Outer splatter: fewer, larger, reach further, some elongated
-    let outerCount = Math.floor(particleCount * 0.5);
-    let outerSigma = DIFFUSION.spreadSigma * DIFFUSION.outerSigmaFactor;
-    for (let i = 0; i < outerCount; i++) {
-      let offsetX = randomGaussian(0, outerSigma) * 1.0;
-      let offsetY = randomGaussian(0, outerSigma) * 0.6;
-      let size = random(DIFFUSION.sizeMax * 0.5, DIFFUSION.sizeMax * 1.1);
-      let alpha = Math.floor(random(DIFFUSION.splashAlphaMin * 0.4, DIFFUSION.splashAlphaMax * 0.5));
-
-      if (Array.isArray(chosenColor)) artLayer.fill(chosenColor[0], chosenColor[1], chosenColor[2], alpha);
-      else artLayer.fill(chosenColor);
-
-      if (random() < 0.3) {
-        artLayer.push();
-        artLayer.translate(x + offsetX, y + offsetY);
-        artLayer.rotate(random(-PI, PI));
-        drawOrganicBlob(artLayer, 0, 0, size * random(0.7, 1.6), chosenColor, 2, 0.6);
-        artLayer.pop();
-      } else {
-        drawOrganicBlob(artLayer, x + offsetX, y + offsetY, size, chosenColor, 2, 0.7);
+          // Try common draw/paint/stroke methods
+          if (typeof brushInstance.paint === 'function') {
+            brushInstance.paint(x, y, opts);
+            usedBrush = true;
+          } else if (typeof brushInstance.stroke === 'function') {
+            brushInstance.stroke({ x, y, size: brushSize, color: rgba, options: opts });
+            usedBrush = true;
+          } else if (typeof brushInstance.draw === 'function') {
+            brushInstance.draw(x, y, opts);
+            usedBrush = true;
+          } else if (typeof brushInstance === 'function') {
+            // some libs export a callable factory
+            brushInstance(x, y, opts);
+            usedBrush = true;
+          }
+        }
       }
+    } catch (e) {
+      // swallow brush errors and fall back
+      usedBrush = false;
     }
 
-    // Occasional heavy glob
-    if (random() < 0.25) {
-      let globSize = random(lastInk.size * 0.35, lastInk.size * 0.85);
-      if (Array.isArray(chosenColor)) artLayer.fill(chosenColor[0], chosenColor[1], chosenColor[2], Math.floor(DIFFUSION.splashAlphaMax * 0.5));
-      artLayer.ellipse(x + randomGaussian(0, DIFFUSION.spreadSigma * 0.45), y + randomGaussian(0, DIFFUSION.spreadSigma * 0.25), globSize, globSize * 0.5);
-    }
+    // Fallback: single organic 'bleed' built from the existing organic blob routines
+    if (!usedBrush) {
+      artLayer.push();
+      artLayer.noStroke();
 
-    artLayer.pop();
+      // soft base wash
+      if (artLayer.drawingContext && typeof artLayer.drawingContext.filter !== 'undefined') artLayer.drawingContext.filter = `blur(${DIFFUSION.blurPx}px)`;
+      drawOrganicBlob(artLayer, x + random(-6, 6), y + random(-4, 4), brushSize * 0.95, chosenColor, 4, 0.8);
+      if (artLayer.drawingContext && typeof artLayer.drawingContext.filter !== 'undefined') artLayer.drawingContext.filter = 'none';
+
+      // add fringe and subtle highlights (no dense ellipse loops)
+      let outer = drawOrganicBlob(artLayer, x + random(-4, 4), y + random(-3, 3), brushSize * 0.5, chosenColor, 2, 0.85);
+      drawFringe(artLayer, x, y, max(outer, brushSize * 0.9), chosenColor);
+      applyHighlights(artLayer, x, y, brushSize * 0.9);
+
+      // some scattered medium blobs for texture (use drawOrganicBlob only)
+      let scatter = Math.max(3, Math.floor(random(2, 6)));
+      for (let i = 0; i < scatter; i++) {
+        let ox = x + randomGaussian() * DIFFUSION.spreadSigma * 0.45;
+        let oy = y + randomGaussian() * DIFFUSION.spreadSigma * 0.35;
+        let s = random(brushSize * 0.18, brushSize * 0.9);
+        drawOrganicBlob(artLayer, ox, oy, s, chosenColor, 2, 0.85);
+      }
+
+      artLayer.pop();
+    }
   }
 
   return {
