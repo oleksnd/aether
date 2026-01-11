@@ -132,6 +132,32 @@
             height: 20px;
         }
 
+        /* Simple toggle switch (overlay visibility) */
+        .toggle {
+            width: 44px;
+            height: 24px;
+            border-radius: 999px;
+            background: #eee;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            padding: 3px;
+            cursor: pointer;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
+            transition: background 150ms ease;
+        }
+        .toggle .toggle-knob {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            transform: translateX(0);
+            transition: transform 160ms ease;
+        }
+        .toggle.on { background: #111; }
+        .toggle.on .toggle-knob { transform: translateX(20px); }
+
         .example-btn { margin-right:8px; padding:6px 10px; font-size:13px; background:rgba(255,255,255,0.9); border-radius:6px; border:none; cursor:pointer; }
         .example-btn:hover { background:rgba(255,255,255,1); }
     </style>
@@ -140,8 +166,13 @@
     <div id="canvas-container"></div>
     <div id="ui">
         <img id="logo" src="assets/logo.svg" alt="Logo">
-        <!-- Export icon (Material Symbol) -->
-        <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined" aria-hidden="true">save</span></button>
+        <!-- Export + overlay toggle (top-right) -->
+        <div id="export-wrap" style="position:absolute; top:12px; right:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
+          <!-- Overlay visibility toggle -->
+          <button id="overlay-toggle" title="Toggle overlays" aria-pressed="true" aria-label="Toggle overlays" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
+          <!-- Export icon (Material Symbol) -->
+          <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined" aria-hidden="true">save</span></button>
+        </div>
 
         <div id="input-container">
             <textarea id="text-input">Small Things</textarea>
@@ -154,12 +185,32 @@
     <script src="diffusion.js"></script>
     <script src="sketch.js"></script>
     <script>
+        // Generate
         document.getElementById('generate-btn').addEventListener('click', () => {
             window.startGeneration(document.getElementById('text-input').value);
         });
+
+        // Export (art layer only)
         document.getElementById('export-btn').addEventListener('click', () => {
             if (typeof window.exportPNG === 'function') window.exportPNG();
         });
+
+        // Overlay toggle: show/hide grid/letters/paths (default: visible)
+        (function(){
+          const toggle = document.getElementById('overlay-toggle');
+          // Start state
+          window.showOverlays = true;
+          if (toggle) {
+            toggle.setAttribute('aria-pressed', 'true');
+            toggle.classList.add('on');
+
+            toggle.addEventListener('click', () => {
+              window.showOverlays = !window.showOverlays;
+              toggle.classList.toggle('on', window.showOverlays);
+              toggle.setAttribute('aria-pressed', String(window.showOverlays));
+            });
+          }
+        })();
     </script>
 </body>
 </html>

@@ -73,19 +73,23 @@ function draw() {
   // Update nozzle movement
   updateNozzle();
 
-  // Redraw grid and letters
-  drawGrid();
+  // Overlays: grid, letters, trails and highlights — toggled via window.showOverlays
+  let overlays = (typeof window.showOverlays === 'undefined') ? true : window.showOverlays;
+  if (overlays) {
+    // Redraw grid and letters
+    drawGrid();
 
-  // Draw completed words
-  drawCompletedWords();
+    // Draw completed words
+    drawCompletedWords();
 
-  // Draw current trail
-  drawCurrentTrail();
+    // Draw current trail
+    drawCurrentTrail();
 
-  // Highlight cells
-  highlightCells();
+    // Highlight cells
+    highlightCells();
+  }
 
-  // Draw nozzle
+  // Draw nozzle (always visible)
   drawNozzle();
 }
 
