@@ -247,9 +247,6 @@ function startGeneration(text) {
   setTargetToCurrent();
 }
 
-let currentSegment = null; // {startX,startY,endX,endY,id}
-let waitingForFlow = false;
-
 function setTargetToCurrent() {
   if (currentWordIndex < currentPaths.length) {
     let word = currentPaths[currentWordIndex];
@@ -258,9 +255,6 @@ function setTargetToCurrent() {
       nozzle.targetX = point.x;
       nozzle.targetY = point.y;
       nozzle.isMoving = true;
-      // define current segment from current nozzle position to the target point
-      currentSegment = { startX: nozzle.x, startY: nozzle.y, endX: point.x, endY: point.y, id: `${currentWordIndex}-${currentPointIndex}` };
-      waitingForFlow = false;
     } else {
       // Next word
       currentWordIndex++;
@@ -270,7 +264,6 @@ function setTargetToCurrent() {
     }
   } else {
     nozzle.isMoving = false;
-    currentSegment = null;
   }
 }
 
@@ -278,69 +271,22 @@ function updateNozzle() {
   if (nozzle.isMoving) {
     nozzle.x = lerp(nozzle.x, nozzle.targetX, nozzle.speed);
     nozzle.y = lerp(nozzle.y, nozzle.targetY, nozzle.speed);
-
-    // Continuous inking while moving — flow between letters (not just stamps on arrival)
-    try {
-      if (typeof Fluid !== 'undefined' && currentWordIndex < currentPaths.length && currentSegment) {
-        let word = currentPaths[currentWordIndex];
-        // drive progressive flow along segment
-        if (typeof Fluid.paintFlowSegment === 'function') {
-          Fluid.paintFlowSegment(currentSegment.id, currentSegment.startX, currentSegment.startY, currentSegment.endX, currentSegment.endY, nozzle.x, nozzle.y, word.fluidColor);
-        } else if (typeof Fluid.executeInking === 'function') {
-          // fallback: small inking at nozzle
-          let ptIdx = Math.min(currentPointIndex, Math.max(0, (word.points || []).length - 1));
-          let letter = (word.points && word.points[ptIdx]) ? word.points[ptIdx].letter : null;
-          if (letter) Fluid.executeInking(letter, nozzle.x, nozzle.y, word.fluidColor);
-        }
-      }
-    } catch (e) { /* non-fatal: continue movement */ }
-
     if (dist(nozzle.x, nozzle.y, nozzle.targetX, nozzle.targetY) < 1) {
       nozzle.x = nozzle.targetX;
       nozzle.y = nozzle.targetY;
       nozzle.isMoving = false;
-
-      // On arrival: check if flow for this segment is finished; if not, keep filling until it is
-      let seg = currentSegment;
-      let word = currentPaths[currentWordIndex];
-      let currentPoint = word.points[currentPointIndex];
-      let finished = true;
-      try {
-        if (seg && typeof Fluid !== 'undefined' && typeof Fluid.paintFlowSegment === 'function') {
-          finished = Fluid.paintFlowSegment(seg.id, seg.startX, seg.startY, seg.endX, seg.endY, nozzle.x, nozzle.y, word.fluidColor);
-        }
-      } catch (e) { finished = true; }
-
-      if (finished) {
-        // final inking hook
-        try { if (typeof Fluid !== 'undefined' && Fluid.executeInking) Fluid.executeInking(currentPoint.letter, nozzle.x, nozzle.y, word.fluidColor); } catch(e){}
-        visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
-        waitingForFlow = false;
-        nozzle.pauseUntil = millis() + 120; // small rest before moving on
-      } else {
-        // not finished: set short pause and mark waiting; we'll retry the segment fill before advancing
-        waitingForFlow = true;
-        nozzle.pauseUntil = millis() + 120;
+      // Add to visited
+      let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
+      visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
+      // Execute inking hook (delegated to Fluid module)
+      if (typeof Fluid !== 'undefined' && Fluid.executeInking) {
+        Fluid.executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].fluidColor);
       }
+      nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
     }
   } else if (millis() > nozzle.pauseUntil && currentWordIndex < currentPaths.length) {
-    if (waitingForFlow && currentSegment) {
-      // try completing the flow; if finished, advance
-      try {
-        let word = currentPaths[currentWordIndex];
-        let finished = (typeof Fluid !== 'undefined' && typeof Fluid.paintFlowSegment === 'function') ? Fluid.paintFlowSegment(currentSegment.id, currentSegment.startX, currentSegment.startY, currentSegment.endX, currentSegment.endY, nozzle.x, nozzle.y, word.fluidColor) : true;
-        if (finished) {
-          waitingForFlow = false;
-          currentPointIndex++;
-          setTargetToCurrent();
-        } else {
-          nozzle.pauseUntil = millis() + 120; // keep waiting
-        }
-      } catch (e) { waitingForFlow = false; currentPointIndex++; setTargetToCurrent(); }
-    } else {
-      currentPointIndex++;
-      setTargetToCurrent();
-    }
+    currentPointIndex++;
+    setTargetToCurrent();
   }
 }
 

@@ -1,8 +1,8 @@
-// Preset: Liquid Ink (particle_spray -> liquid_ink)
+// Preset: Ink (particle_spray -> ink)
 (function(){
   if (typeof registerFluidPreset !== 'function') return;
 
-  registerFluidPreset('Liquid Ink', function(api){
+  registerFluidPreset('ink', function(api){
     const artLayer = api.artLayer;
 
     function parseColor(col, a){

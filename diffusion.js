@@ -362,75 +362,34 @@ const Fluid = (function(){
         const factory = FLUID_PRESET_FACTORIES[styleName];
         const fn = factory(api);
         if (typeof fn === 'function') {
-        // factory may return a plain function or a function with helper methods attached
-        FLUID_STYLES[styleName] = fn;
-        console.log('[Fluid] preset initialized:', styleName);
-      } else if (fn && typeof fn === 'object') {
-        // support object return (deprecated)
-        console.warn('[Fluid] preset factory returned an object for', styleName, '. Using its .ink method if present.');
-        if (typeof fn.ink === 'function') FLUID_STYLES[styleName] = fn.ink;
-        else FLUID_STYLES[styleName] = function(){/* noop */};
-        // attach helper methods if provided
-        if (fn.paintFlowSegment) FLUID_STYLES[styleName].paintFlowSegment = fn.paintFlowSegment;
-      } else {
-        console.warn('[Fluid] preset factory did not return a function for', styleName);
+          FLUID_STYLES[styleName] = fn;
+          console.log('[Fluid] preset initialized:', styleName);
+        } else {
+          console.warn('[Fluid] preset factory did not return a function for', styleName);
+        }
+      } catch (e) {
+        console.error('Failed to initialize fluid preset', styleName, e);
       }
-    } catch (e) {
-      console.error('Failed to initialize fluid preset', styleName, e);
+    }
+
+    let fn = (FLUID_STYLES && FLUID_STYLES[styleName]) ? FLUID_STYLES[styleName] : FLUID_STYLES['Aether Soft'];
+    if (!fn) {
+      console.error('[Fluid] No inking function found for style', styleName);
+      return;
+    }
+    try {
+      fn(letter, x, y, chosenColor);
+      console.log('[Fluid] executed inking for', styleName, 'at', x, y);
+    } catch (err) {
+      console.error('Fluid style error', err);
     }
   }
-
-  let fn = (FLUID_STYLES && FLUID_STYLES[styleName]) ? FLUID_STYLES[styleName] : FLUID_STYLES['Aether Soft'];
-  if (!fn) {
-    console.error('[Fluid] No inking function found for style', styleName);
-    return;
-  }
-  try {
-    fn(letter, x, y, chosenColor);
-    console.log('[Fluid] executed inking for', styleName, 'at', x, y);
-  } catch (err) {
-    console.error('Fluid style error', err);
-  }
-}
-
-function paintFlowSegment(id, x1, y1, x2, y2, nozzleX, nozzleY, chosenColor) {
-  // delegate to style-specific paintFlowSegment if available; return true when segment is considered finished
-  if (!artLayer) return true;
-  let styleName = 'Aether Soft';
-  try {
-    if (typeof window !== 'undefined' && window.currentFluidStyle) styleName = window.currentFluidStyle;
-    else if (typeof document !== 'undefined' && document.getElementById('styleSelector')) styleName = document.getElementById('styleSelector').value;
-  } catch (e) { styleName = 'Aether Soft'; }
-
-  // initialize style if needed
-  if (!FLUID_STYLES[styleName] && FLUID_PRESET_FACTORIES[styleName]) {
-    try {
-      const api = { artLayer, DIFFUSION, lastInk, hslToRgb, rgbToHsl, applyPigmentGrain, applyPaperGrain, drawOrganicBlob };
-      const factory = FLUID_PRESET_FACTORIES[styleName];
-      const fn = factory(api);
-      if (typeof fn === 'function') FLUID_STYLES[styleName] = fn;
-      if (fn && typeof fn === 'object' && fn.paintFlowSegment) FLUID_STYLES[styleName].paintFlowSegment = fn.paintFlowSegment;
-    } catch (e) { /* ignore */ }
-  }
-
-  let styleFn = FLUID_STYLES[styleName];
-  if (styleFn && typeof styleFn.paintFlowSegment === 'function') {
-    try {
-      return !!styleFn.paintFlowSegment(id, x1, y1, x2, y2, nozzleX, nozzleY, chosenColor);
-    } catch (e) { console.error('paintFlowSegment error', e); return true; }
-  }
-
-  // fallback: simple inking call and consider segment finished
-  try { if (typeof styleFn === 'function') styleFn(null, nozzleX, nozzleY, chosenColor); } catch(e){}
-  return true;
-}
 
   return {
     init,
     pickColor,
     pickColorDistinct,
     executeInking,
-    paintFlowSegment,
     // Expose params for runtime tweaking if needed
     DIFFUSION,
     FLUID_PALETTE
