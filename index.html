@@ -173,9 +173,9 @@
           <button id="overlay-toggle" title="Toggle overlays" aria-pressed="true" aria-label="Toggle overlays" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
                     <!-- Style selector: choose rendering preset -->
                     <select id="styleSelector" aria-label="Rendering style" style="margin-left:8px; padding:6px 8px; border-radius:6px;">
-                        <option value="Aether Soft">Aether Soft</option>
-                        <option value="Aether Soft Modern">Aether Soft Modern</option>
-                        <option value="Particle Spray">Ink</option>
+                        <option value="aether-soft">Aether Soft</option>
+                        <option value="aether-soft-modern">Aether Soft Modern</option>
+                        <option value="liquid-ink">Liquid Ink</option>
                     </select>
           <!-- Export icon (Material Symbol) -->
           <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined" aria-hidden="true">save</span></button>
@@ -191,9 +191,6 @@
     <script src="dna.js"></script>
     <script src="palettes/palette.js"></script>
     <script src="diffusion.js"></script>
-    <script src="presets/aether_soft.js"></script>
-    <script src="presets/aether_soft_modern.js"></script>
-    <script src="presets/particle_spray.js"></script>
     <script src="sketch.js"></script>
     <script>
         // Generate
@@ -236,6 +233,32 @@
             });
           }
         })();
+    </script>
+    <script>
+        // Dynamic engine loading
+        let loadedEngines = new Set();
+
+        function loadEngine(style) {
+            if (loadedEngines.has(style)) return Promise.resolve();
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = `engines/${style}/engine.js`;
+                script.onload = () => {
+                    loadedEngines.add(style);
+                    resolve();
+                };
+                script.onerror = () => resolve(); // non-fatal
+                document.head.appendChild(script);
+            });
+        }
+
+        // Load default engine
+        loadEngine('aether-soft');
+
+        // Load engine on style change
+        document.getElementById('styleSelector').addEventListener('change', (e) => {
+            loadEngine(e.target.value);
+        });
     </script>
 </body>
 </html>

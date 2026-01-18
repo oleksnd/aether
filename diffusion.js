@@ -23,7 +23,7 @@ const Fluid = (function(){
     ];
   }
 
-  // Diffusion engine parameters (coalescence / puddle mode)
+  // Diffusion engine parameters (coalescence / puddle mode) - kept for potential future use
   const DIFFUSION = {
     // Lower count of distinct droplets but more organic mass per ink
     particlesMin: 12,
@@ -284,7 +284,8 @@ const Fluid = (function(){
   function drawOrganicBlob(gfx, cx, cy, baseRadius, color, layers = 4, verticalSquash = 0.75) {
     let outerRadius = 0;
 
-    for (let layer = layers; layer >= 1; layer--) {
+    // Draw from inner to outer (ascending) so inner layers are rendered last and appear on top
+    for (let layer = 1; layer <= layers; layer++) {
       let radius = baseRadius * (1 + layer * 0.18);
       outerRadius = max(outerRadius, radius);
 
@@ -324,62 +325,81 @@ const Fluid = (function(){
 
   // Preset registry: external preset modules can register factories via `registerFluidPreset`.
   // Factories receive an `api` object and should return an inking function `(letter,x,y,chosenColor) => {}`.
-  const FLUID_PRESET_FACTORIES = {};
-  const FLUID_STYLES = {};
-
-  function registerFluidPreset(name, factory) {
-    if (typeof name !== 'string' || typeof factory !== 'function') return;
-    FLUID_PRESET_FACTORIES[name] = factory;
-  }
-
-  // Expose minimal registration API to preset scripts
-  if (typeof window !== 'undefined') window.registerFluidPreset = registerFluidPreset;
-
   function executeInking(letter, x, y, chosenColor) {
     if (!artLayer) return;
-    // Prefer window-managed current style, then DOM selector, fall back to Aether Soft
-    let styleName = 'Aether Soft';
+    // Prefer window-managed current style, then DOM selector, fall back to aether-soft
+    let styleName = 'aether-soft';
     try {
       if (typeof window !== 'undefined' && window.currentFluidStyle) styleName = window.currentFluidStyle;
       else if (typeof document !== 'undefined' && document.getElementById('styleSelector')) styleName = document.getElementById('styleSelector').value;
-    } catch (e) { styleName = 'Aether Soft'; }
+    } catch (e) { styleName = 'aether-soft'; }
 
     console.log('[Fluid] requested style:', styleName, 'letter:', letter, 'pos:', x, y);
 
-    // If style hasn't been materialized yet but a factory exists, bind it with internal api
-    if (!FLUID_STYLES[styleName] && FLUID_PRESET_FACTORIES[styleName]) {
-      try {
-        const api = {
-          artLayer,
-          DIFFUSION,
-          lastInk,
-          hslToRgb,
-          rgbToHsl,
-          applyPigmentGrain,
-          applyPaperGrain,
-          drawOrganicBlob
-        };
-        const factory = FLUID_PRESET_FACTORIES[styleName];
-        const fn = factory(api);
-        if (typeof fn === 'function') {
-          FLUID_STYLES[styleName] = fn;
-          console.log('[Fluid] preset initialized:', styleName);
-        } else {
-          console.warn('[Fluid] preset factory did not return a function for', styleName);
-        }
-      } catch (e) {
-        console.error('Failed to initialize fluid preset', styleName, e);
-      }
-    }
-
-    let fn = (FLUID_STYLES && FLUID_STYLES[styleName]) ? FLUID_STYLES[styleName] : FLUID_STYLES['Aether Soft'];
-    if (!fn) {
-      console.error('[Fluid] No inking function found for style', styleName);
+    // Map style name to engine object
+    let engineKey = styleName.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('') + 'Engine';
+    let engine = window[engineKey];
+    if (!engine || !engine.execute) {
+      console.error('[Fluid] No engine found for style', styleName, 'expected', engineKey);
       return;
     }
     try {
-      fn(letter, x, y, chosenColor);
-      console.log('[Fluid] executed inking for', styleName, 'at', x, y);
+      // Ensure new ink is composited on top of existing content (defensive fix)
+      try {
+        if (artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation !== 'source-over') {
+          // If some code changed it to an odd mode (e.g. destination-over), force normal source-over
+          artLayer.drawingContext.globalCompositeOperation = 'source-over';
+        }
+      } catch (_) { /* ignore if unavailable */ }
+
+      try {
+        console.log('[Fluid] composite BEFORE execute:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation);
+      } catch (e) { /* ignore */ }
+
+      // Robustness: draw engine output into a temporary offscreen buffer and then composite onto the real art layer
+      // This ensures the engine cannot accidentally draw 'behind' existing pixels using destination-over
+      let tmp = null;
+      try {
+        tmp = createGraphics(artLayer.width || width, artLayer.height || height);
+        // make sure tmp starts cleared and uses normal composite
+        try { if (tmp && typeof tmp.clear === 'function') tmp.clear(); } catch (e) {}
+        try { if (tmp && tmp.drawingContext) tmp.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) {}
+
+        // Temporarily point global artLayer to tmp so engines draw into this buffer
+        const prevLayer = window.artLayer;
+        window.artLayer = tmp;
+        try {
+          engine.execute(letter, x, y, chosenColor);
+        } finally {
+          // restore original art layer reference
+          window.artLayer = prevLayer;
+        }
+
+        // Composite tmp onto the real artLayer using BLEND/source-over so the rendered result is guaranteed on top
+        try {
+          if (artLayer && typeof artLayer.push === 'function') artLayer.push();
+          try { if (typeof artLayer.blendMode === 'function') artLayer.blendMode(BLEND); } catch (e) {}
+          try { if (artLayer && artLayer.drawingContext) artLayer.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) {}
+          try { console.log('[Fluid] compositing tmp onto artLayer with BLEND'); } catch (e) {}
+          artLayer.image(tmp, 0, 0);
+        } finally {
+          try { if (artLayer && typeof artLayer.pop === 'function') artLayer.pop(); } catch (e) {}
+        }
+
+        try {
+          console.log('[Fluid] executed inking for', styleName, 'at', x, y, 'COMPOSITE_AFTER:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation);
+        } catch (e) { /* ignore */ }
+      } catch (err) {
+        console.error('[Fluid] engine.execute error (fallback to direct):', err);
+        // fallback to direct execution if buffering fails
+        try {
+          engine.execute(letter, x, y, chosenColor);
+        } catch (err2) {
+          console.error('Fluid style error (direct fallback)', err2);
+        }
+      } finally {
+        try { if (tmp && typeof tmp.remove === 'function') tmp.remove(); } catch (e) { /* ignore */ }
+      }
     } catch (err) {
       console.error('Fluid style error', err);
     }

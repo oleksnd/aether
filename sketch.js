@@ -40,8 +40,14 @@ function loadBrushes(layer) {
       const s = document.createElement('script');
       s.src = src;
       s.async = true;
-      s.onload = () => resolve(true);
-      s.onerror = () => resolve(false);
+      s.onload = () => {
+        try { console.log('[LoadScript] Loaded', src); } catch (e) {}
+        resolve(true);
+      };
+      s.onerror = () => {
+        try { console.warn('[LoadScript] Failed to load', src); } catch (e) {}
+        resolve(false);
+      };
       document.head.appendChild(s);
     });
   }
@@ -63,6 +69,7 @@ function setup() {
 
   // Create isolated art layer
   artLayer = createGraphics(width, height);
+  window.artLayer = artLayer; // Make global for engines
   // Initialize Fluid module with the art layer (module sets blend mode internally)
   if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
 
@@ -70,8 +77,8 @@ function setup() {
   try {
     const styleSel = document.getElementById('styleSelector');
     if (styleSel) {
-      // default to Aether Soft
-      styleSel.value = styleSel.value || 'Aether Soft';
+      // default to aether-soft
+      styleSel.value = styleSel.value || 'aether-soft';
       window.currentFluidStyle = styleSel.value;
       styleSel.addEventListener('change', (e) => {
         window.currentFluidStyle = e.target.value;
@@ -190,6 +197,8 @@ function startGeneration(text) {
   highlightedCells.clear();
   // Clear the art layer so each generation starts fresh
   try { if (artLayer && typeof artLayer.clear === 'function') artLayer.clear(); } catch (e) { /* ignore */ }
+  // Defensive: ensure artLayer composite mode is normal when starting a generation
+  try { if (artLayer && artLayer.drawingContext) artLayer.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) { /* ignore */ }
 
   let colorIndex = 0;
   // Track fluid colors used for this generation so we can avoid duplicates when requested
@@ -280,6 +289,9 @@ function updateNozzle() {
       visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
       // Execute inking hook (delegated to Fluid module)
       if (typeof Fluid !== 'undefined' && Fluid.executeInking) {
+        try {
+          console.log('[Sketch] Fluid.executeInking -> wordIndex=', currentWordIndex, 'pointIndex=', currentPointIndex, 'color=', currentPaths[currentWordIndex].fluidColor);
+        } catch (e) { /* ignore logging errors */ }
         Fluid.executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].fluidColor);
       }
       nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
