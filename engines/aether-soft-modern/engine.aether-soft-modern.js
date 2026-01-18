@@ -162,7 +162,8 @@ window.AetherSoftModernEngine = (function() {
       brushSize *= pulse;
 
       // Modern variant: randomize overall scale of the puddle for variety
-      let sizeScale = random(0.4, 2.0);
+      // Limit the upper bound to avoid extremely large puddles (cap reduced from 2.0 to 1.25)
+      let sizeScale = random(0.4, 1.25);
       brushSize *= sizeScale;
 
       let usedBrush = false;
