@@ -171,6 +171,11 @@
           <span id="overlay-label" style="font-size:12px; color:#111; margin-right:6px; cursor:pointer; user-select:none;">Grid</span>
           <!-- Overlay visibility toggle -->
           <button id="overlay-toggle" title="Toggle overlays" aria-pressed="true" aria-label="Toggle overlays" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
+
+                    <!-- A-Z toggle: show letters A-Z in order (default: ON). Turn OFF to randomize letters -->
+                    <span id="az-label" style="font-size:12px; color:#111; margin-right:6px; margin-left:6px; cursor:pointer; user-select:none;">A-Z</span>
+                    <button id="az-toggle" title="Toggle A-Z (alphabetical)" aria-pressed="true" aria-label="Toggle A-Z" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
+
                     <!-- Style selector: choose rendering preset -->
                     <select id="styleSelector" aria-label="Rendering style" style="margin-left:8px; padding:6px 8px; border-radius:6px;">
                         <option value="aether-soft">Aether Soft</option>
@@ -228,6 +233,47 @@
 
           if (label) {
             // clicking label toggles overlays too
+            label.addEventListener('click', () => {
+              if (toggle) toggle.click();
+            });
+          }
+        })();
+
+        // A-Z toggle: show letters A-Z in order by default (ON). When OFF, letters are randomized.
+        (function(){
+          const toggle = document.getElementById('az-toggle');
+          const label = document.getElementById('az-label');
+
+          // Default to A-Z enabled if not previously set
+          window.sequentialAlphabet = (typeof window.sequentialAlphabet === 'undefined') ? true : window.sequentialAlphabet;
+
+          function updateUI(state) {
+            if (!toggle) return;
+            toggle.classList.toggle('on', state);
+            toggle.setAttribute('aria-pressed', String(state));
+            if (label) label.classList.toggle('inactive', !state);
+          }
+
+          updateUI(window.sequentialAlphabet);
+
+          if (toggle) {
+            toggle.addEventListener('click', () => {
+              window.sequentialAlphabet = !window.sequentialAlphabet;
+              updateUI(window.sequentialAlphabet);
+
+              // Apply mapping immediately
+              if (window.sequentialAlphabet) {
+                // Use DNA mapping (alphabetical)
+                try { RUNTIME_ALPHABET_MAP = null; } catch (e) { /* ignore */ }
+              } else {
+                // Enable randomized runtime mapping
+                try { initShuffledAlphabet(); } catch (e) { RUNTIME_ALPHABET_MAP = null; }
+              }
+            });
+          }
+
+          if (label) {
+            // clicking label toggles A-Z too
             label.addEventListener('click', () => {
               if (toggle) toggle.click();
             });

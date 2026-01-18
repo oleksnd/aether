@@ -7,6 +7,36 @@ let gridOffsetX, gridOffsetY;
 let currentPaths = [];
 let highlightedCells = new Set();
 
+// Runtime mapping: randomized placement of letters (DNA remains immutable)
+let RUNTIME_ALPHABET_MAP = null;
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function initShuffledAlphabet() {
+  const letters = Object.keys(ALPHABET_DNA);
+  // all available zone indices (grid size may be larger than number of letters)
+  const totalZones = gridCols * gridRows;
+  const zones = Array.from({length: totalZones}, (_, i) => i);
+  shuffleArray(zones);
+  shuffleArray(letters);
+  RUNTIME_ALPHABET_MAP = {};
+  for (let i = 0; i < letters.length; i++) {
+    RUNTIME_ALPHABET_MAP[letters[i]] = zones[i];
+  }
+}
+
+function getZoneIndexForLetter(letter) {
+  if (RUNTIME_ALPHABET_MAP && RUNTIME_ALPHABET_MAP.hasOwnProperty(letter)) return RUNTIME_ALPHABET_MAP[letter];
+  if (ALPHABET_DNA[letter] && typeof ALPHABET_DNA[letter].zoneIndex === 'number') return ALPHABET_DNA[letter].zoneIndex;
+  return null;
+}
+
 let wordColors = [
   [100, 100, 100], // 1st word: neutral gray
   [100, 150, 255], // 2nd: light blue
@@ -103,6 +133,18 @@ function setup() {
   gridRows = GRID_CONFIG.ROWS;
   gridMargin = GRID_CONFIG.MARGIN;
 
+  // Initialize alphabet mapping: default A-Z enabled (sequential). If user prefers randomized, init shuffled map.
+  try {
+    window.sequentialAlphabet = (typeof window.sequentialAlphabet === 'undefined') ? true : window.sequentialAlphabet;
+    if (window.sequentialAlphabet) {
+      // Use DNA mapping directly (A-Z)
+      RUNTIME_ALPHABET_MAP = null;
+    } else {
+      // Use randomized runtime mapping
+      initShuffledAlphabet();
+    }
+  } catch (e) { RUNTIME_ALPHABET_MAP = null; }
+
   // Calculate cell dimensions
   cellWidth = width / gridCols;
   cellHeight = height / gridRows;
@@ -168,16 +210,26 @@ function drawGrid() {
     line(gridOffsetX, y, gridOffsetX + gridCols * cellWidth, y);
   }
 
-  // Draw letters in centers
+  // Draw letters in centers (letters are randomized via runtime map)
   textAlign(CENTER, CENTER);
   textSize(16);
   fill(150); // Light gray, quiet
   noStroke();
 
-  for (let letter in ALPHABET_DNA) {
-    let index = ALPHABET_DNA[letter].zoneIndex;
-    let col = index % gridCols;
-    let row = Math.floor(index / gridCols);
+  // Build inverse mapping: zone -> letter
+  let inverse = {};
+  if (RUNTIME_ALPHABET_MAP) {
+    for (let l in RUNTIME_ALPHABET_MAP) inverse[RUNTIME_ALPHABET_MAP[l]] = l;
+  } else {
+    for (let l in ALPHABET_DNA) inverse[ALPHABET_DNA[l].zoneIndex] = l;
+  }
+
+  const totalZones = gridCols * gridRows;
+  for (let z = 0; z < totalZones; z++) {
+    const letter = inverse[z];
+    if (!letter) continue; // leave empty cells blank
+    let col = z % gridCols;
+    let row = Math.floor(z / gridCols);
     let x = gridOffsetX + col * cellWidth + cellWidth / 2;
     let y = gridOffsetY + row * cellHeight + cellHeight / 2;
     text(letter, x, y);
@@ -211,8 +263,9 @@ function startGeneration(text) {
   for (let word of wordArrays) {
     let path = [];
     for (let letter of word) {
-      if (ALPHABET_DNA[letter]) {
-        let index = ALPHABET_DNA[letter].zoneIndex;
+      // Use runtime mapping if available, otherwise fall back to DNA
+      let index = getZoneIndexForLetter(letter);
+      if (index !== null) {
         let col = index % gridCols;
         let row = Math.floor(index / gridCols);
 

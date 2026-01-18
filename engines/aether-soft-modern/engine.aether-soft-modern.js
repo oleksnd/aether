@@ -270,9 +270,25 @@ window.AetherSoftModernEngine = (function() {
               col = hslToRgb(hsl.h, hsl.s, hsl.l);
             }
 
+            // If this particle color is very close to the stroke base color, boost alpha so overlapping droplets visually merge
+            let sameColorBoost = 1;
+            if (Array.isArray(baseCol) && Array.isArray(col)) {
+              let d = Math.abs(col[0]-baseCol[0]) + Math.abs(col[1]-baseCol[1]) + Math.abs(col[2]-baseCol[2]);
+              if (d < 18) sameColorBoost = 1.8;
+            }
+            palpha = Math.floor(palpha * sameColorBoost);
+
             if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], palpha);
             else artLayer.fill(col);
             artLayer.ellipse(px, py, psize, psize);
+
+            // Soft pooling to help same-color strokes coalesce visually
+            if (sameColorBoost > 1 && random() < 0.28) {
+              artLayer.noStroke();
+              if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], Math.max(2, Math.floor(3 * sameColorBoost)));
+              else artLayer.fill(col);
+              artLayer.ellipse(x + randomGaussian() * brushSize * 0.02, y + randomGaussian() * brushSize * 0.02, brushSize * 0.6, brushSize * 0.6);
+            }
           }
         }
 
@@ -287,9 +303,26 @@ window.AetherSoftModernEngine = (function() {
             hsl.h += random(-2, 2);
             col = hslToRgb(hsl.h, hsl.s, hsl.l);
           }
+
+          // boost background particle alpha for same-color blending
+          let sameColorBoostBg = 1;
+          if (Array.isArray(baseCol) && Array.isArray(col)) {
+            let d = Math.abs(col[0]-baseCol[0]) + Math.abs(col[1]-baseCol[1]) + Math.abs(col[2]-baseCol[2]);
+            if (d < 18) sameColorBoostBg = 1.6;
+          }
+          alpha = Math.floor(alpha * sameColorBoostBg);
+
           if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], alpha);
           else artLayer.fill(col);
           artLayer.ellipse(x + ox, y + oy, sz, sz);
+
+          // occasional soft center to bind same-color background blobs
+          if (sameColorBoostBg > 1 && random() < 0.12) {
+            artLayer.noStroke();
+            if (Array.isArray(col)) artLayer.fill(col[0], col[1], col[2], Math.max(1, Math.floor(2 * sameColorBoostBg)));
+            else artLayer.fill(col);
+            artLayer.ellipse(x + randomGaussian() * brushSize * 0.02, y + randomGaussian() * brushSize * 0.02, brushSize * 0.45, brushSize * 0.45);
+          }
         }
 
         if (baseCol) applyPigmentGrain(artLayer, x, y, spread * 0.9, baseCol);
