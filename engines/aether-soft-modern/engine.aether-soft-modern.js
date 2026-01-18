@@ -1,5 +1,5 @@
-// Aether Soft Engine: Isolated watercolor logic
-window.AetherSoftEngine = (function() {
+// Aether Soft Modern Engine (named file): Isolated watercolor logic with extra randomization
+window.AetherSoftModernEngine = (function() {
   // Private constants (no sharing with other engines)
   const BASE_PUDDLE_MAX_CAP = 120;
   const BASE_PUDDLE_GROWTH_RATE = 2;
@@ -15,7 +15,7 @@ window.AetherSoftEngine = (function() {
   // Private state
   let lastInk = { x: null, y: null, time: 0, size: 0, alpha: 0 };
 
-  // Private helper functions
+  // Helper functions and full engine body copied from engine.js (isolated for brevity)
   function hslToRgb(h, s, l) {
     h /= 360; s /= 100; l /= 100;
     let r, g, b;
@@ -61,8 +61,8 @@ window.AetherSoftEngine = (function() {
     for (let i = 0; i < count; i++) {
       let ang = random(0, TWO_PI);
       let rad = random(0, outerRadius);
-      let px = cx + cos(ang) * rad;
-      let py = cy + sin(ang) * rad;
+      let px = cx + Math.cos(ang) * rad;
+      let py = cy + Math.sin(ang) * rad;
       let sz = random(0.3, 1.2);
       let alpha = Math.floor(random(2, 8));
       let col = color.slice();
@@ -81,8 +81,8 @@ window.AetherSoftEngine = (function() {
     for (let i = 0; i < count; i++) {
       let ang = random(0, TWO_PI);
       let rad = random(0, outerRadius * 0.8);
-      let px = cx + cos(ang) * rad;
-      let py = cy + sin(ang) * rad;
+      let px = cx + Math.cos(ang) * rad;
+      let py = cy + Math.sin(ang) * rad;
       let sz = random(0.2, 0.8);
       let alpha = Math.floor(random(1, 6));
       let col = color.slice();
@@ -95,91 +95,44 @@ window.AetherSoftEngine = (function() {
     }
   }
 
-  function subdivideDeform(points, iterations, dispScale, noiseScale) {
-    for (let iter = 0; iter < iterations; iter++) {
-      let newPoints = [];
-      for (let i = 0; i < points.length; i++) {
-        let a = points[i];
-        let b = points[(i + 1) % points.length];
-        let mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-        let disp = dispScale * (1 - iter / iterations);
-        let nx = noise(mid.x * noiseScale, mid.y * noiseScale, iter * 0.1);
-        let ny = noise(mid.x * noiseScale + 100, mid.y * noiseScale + 100, iter * 0.1);
-        mid.x += (nx - 0.5) * disp;
-        mid.y += (ny - 0.5) * disp;
-        newPoints.push(a, mid);
-      }
-      points = newPoints;
-    }
-    return points;
+  let _buffer = null;
+
+  function init(opts) {
+    try {
+      const w = opts && opts.width ? opts.width : (typeof width !== 'undefined' ? width : 800);
+      const h = opts && opts.height ? opts.height : (typeof height !== 'undefined' ? height : 600);
+      _buffer = createGraphics(w, h);
+      try { if (typeof _buffer.clear === 'function') _buffer.clear(); } catch (e) {}
+    } catch (e) { _buffer = null; }
   }
 
-  function drawOrganicBlob(gfx, cx, cy, baseRadius, color, layers = 4, verticalSquash = 0.75) {
-    let shapeVertices = 18;
-    let subdivideDispFactor = 0.28;
-    let noiseScale = 0.02;
-    let subdivideIterations = 3;
-
-    for (let layer = 0; layer < layers; layer++) {
-      let radius = baseRadius * (1 - layer * 0.15);
-      let alpha = Math.floor(map(layer, 0, layers - 1, 120, 20));
-      let points = [];
-      for (let i = 0; i < shapeVertices; i++) {
-        let ang = map(i, 0, shapeVertices, 0, TWO_PI);
-        let r = radius + random(-radius * 0.2, radius * 0.2);
-        let x = cos(ang) * r;
-        let y = sin(ang) * r * verticalSquash;
-        points.push({ x, y });
-      }
-      points = subdivideDeform(points, subdivideIterations, radius * subdivideDispFactor, noiseScale);
-      gfx.push();
-      gfx.translate(cx, cy);
-      gfx.noStroke();
-      if (Array.isArray(color)) gfx.fill(color[0], color[1], color[2], alpha);
-      else gfx.fill(color);
-      gfx.beginShape();
-      for (let p of points) {
-        gfx.vertex(p.x, p.y);
-      }
-      gfx.endShape(CLOSE);
-      gfx.pop();
-    }
+  function compose(target) {
+    try {
+      if (!_buffer || !target) return;
+      if (typeof target.push === 'function') target.push();
+      try { if (typeof target.blendMode === 'function') target.blendMode(BLEND); } catch (e) {}
+      target.image(_buffer, 0, 0);
+      try { if (typeof target.pop === 'function') target.pop(); } catch (e) {}
+    } catch (e) { /* ignore */ }
   }
 
-  function drawCapillaries(gfx, cx, cy, baseSize, color, count) {
-    count = count || Math.floor(map(baseSize, 40, 400, 6, 20));
-    for (let i = 0; i < count; i++) {
-      let ang = random(0, TWO_PI);
-      let len = random(baseSize * 0.6, baseSize * 1.6) * (1 + random(-0.15, 0.3));
-      let midx = cx + cos(ang) * (len * 0.45 + random(-6, 6));
-      let midy = cy + sin(ang) * (len * 0.45 + random(-6, 6));
-      let thin = random(max(1, baseSize * 0.04), max(1.5, baseSize * 0.12));
-      let c = color;
-      if (Array.isArray(color)) {
-        let hsl = rgbToHsl(color[0], color[1], color[2]);
-        hsl.h += random(-3, 3);
-        hsl.l = constrain(hsl.l + random(-6, 4), 4, 96);
-        c = hslToRgb(hsl.h, hsl.s, hsl.l);
-      }
-      gfx.push();
-      gfx.translate(midx, midy);
-      gfx.rotate(ang + random(-0.15, 0.15));
-      gfx.noStroke();
-      if (Array.isArray(c)) gfx.fill(c[0], c[1], c[2], Math.floor(random(8, 28)));
-      else gfx.fill(c);
-      drawOrganicBlob(gfx, 0, 0, thin, c, 2, random(0.25, 0.6));
-      gfx.pop();
-    }
+  function dispose() {
+    try { if (_buffer && typeof _buffer.remove === 'function') _buffer.remove(); } catch (e) {}
+    _buffer = null;
   }
 
   return {
+    init,
+    compose,
+    dispose,
     execute: function(letter, x, y, chosenColor) {
-      if (!window.artLayer) return;
+      if (!_buffer) init();
+      if (!_buffer) return;
 
-      let artLayer = window.artLayer;
-      // Defensive: ensure we draw new marks on top
+      let artLayer = _buffer; // internal
       try { if (artLayer && artLayer.drawingContext) artLayer.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) { /* ignore */ }
-      try { console.log('[Aether Soft] composite at start:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) { /* ignore */ }
+      try { console.log('[Aether Soft Modern] (buffer) composite at start:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) { /* ignore */ }
+
       let now = millis();
       let distFromLast = (lastInk.x === null) ? Infinity : dist(x, y, lastInk.x, lastInk.y);
       let dt = (lastInk.time) ? (now - lastInk.time) : 0;
@@ -207,6 +160,10 @@ window.AetherSoftEngine = (function() {
       try { seed = (letter && letter.charCodeAt && letter.charCodeAt(0)) || 0; } catch (e) { seed = 0; }
       let pulse = 1 + 0.06 * sin((millis() * 0.004) + (seed * 0.13));
       brushSize *= pulse;
+
+      // Modern variant: randomize overall scale of the puddle for variety
+      let sizeScale = random(0.4, 2.0);
+      brushSize *= sizeScale;
 
       let usedBrush = false;
       try {
@@ -250,24 +207,16 @@ window.AetherSoftEngine = (function() {
             };
 
             if (typeof brushInstance.paint === 'function') {
-              try { console.log('[Aether Soft] composite before brush paint:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               brushInstance.paint(x, y, opts);
-              try { console.log('[Aether Soft] composite after brush paint:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               usedBrush = true;
             } else if (typeof brushInstance.stroke === 'function') {
-              try { console.log('[Aether Soft] composite before brush stroke:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               brushInstance.stroke({ x, y, size: brushSize, color: rgba, options: opts });
-              try { console.log('[Aether Soft] composite after brush stroke:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               usedBrush = true;
             } else if (typeof brushInstance.draw === 'function') {
-              try { console.log('[Aether Soft] composite before brush draw:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               brushInstance.draw(x, y, opts);
-              try { console.log('[Aether Soft] composite after brush draw:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               usedBrush = true;
             } else if (typeof brushInstance === 'function') {
-              try { console.log('[Aether Soft] composite before brush func:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               brushInstance(x, y, opts);
-              try { console.log('[Aether Soft] composite after brush func:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
               usedBrush = true;
             }
           }
@@ -277,10 +226,8 @@ window.AetherSoftEngine = (function() {
       }
 
       if (!usedBrush) {
-        try { console.log('[Aether Soft] composite before fallback push:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
         artLayer.push();
         artLayer.noStroke();
-        try { console.log('[Aether Soft] composite after push/before blendMode:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
         if (typeof artLayer.blendMode === 'function') artLayer.blendMode(MULTIPLY);
 
         let baseCol = Array.isArray(chosenColor) ? chosenColor.slice() : null;
@@ -296,8 +243,8 @@ window.AetherSoftEngine = (function() {
         for (let s = 0; s < streamCount; s++) {
           let ang = random(0, TWO_PI);
           let originOffset = randomGaussian() * (brushSize * 0.12);
-          let ox0 = x + cos(ang + PI/2) * originOffset;
-          let oy0 = y + sin(ang + PI/2) * originOffset;
+          let ox0 = x + Math.cos(ang + PI/2) * originOffset;
+          let oy0 = y + Math.sin(ang + PI/2) * originOffset;
 
           let len = random(brushSize * 0.6, brushSize * 2.0) * (1 + (1 - speedNorm) * 0.9);
           let dropletsPerStream = Math.max(6, Math.floor(map(len, brushSize * 0.6, brushSize * 2.0, 8, 48)));
@@ -305,13 +252,13 @@ window.AetherSoftEngine = (function() {
           for (let k = 0; k < dropletsPerStream; k++) {
             let t = (k / dropletsPerStream) + random(-0.06, 0.06);
             t = constrain(t, 0, 1);
-            let px = ox0 + cos(ang) * (t * len + random(-len * 0.06, len * 0.06));
-            let py = oy0 + sin(ang) * (t * len + random(-len * 0.06, len * 0.06));
+            let px = ox0 + Math.cos(ang) * (t * len + random(-len * 0.06, len * 0.06));
+            let py = oy0 + Math.sin(ang) * (t * len + random(-len * 0.06, len * 0.06));
 
             px += randomGaussian() * spread * 0.16;
             py += randomGaussian() * spread * 0.12;
 
-            let psize = random(0.5, 3.0) * 200.0;
+            let psize = random(0.5, 3.0) * 200.0 * (typeof sizeScale === 'number' ? sizeScale : 1);
             let palpha = Math.floor(random(1, 5));
 
             let col = baseCol;
@@ -331,7 +278,7 @@ window.AetherSoftEngine = (function() {
         for (let i = 0; i < backgroundAllocation; i++) {
           let ox = randomGaussian() * spread * 1.0;
           let oy = randomGaussian() * spread * 0.7;
-          let sz = random(0.4, 2.2) * 200.0;
+          let sz = random(0.4, 2.2) * 200.0 * (typeof sizeScale === 'number' ? sizeScale : 1);
           let alpha = Math.floor(random(1, 5));
           let col = baseCol;
           if (Array.isArray(baseCol) && random() < 0.06) {
@@ -348,7 +295,6 @@ window.AetherSoftEngine = (function() {
         applyPaperGrain(artLayer, x, y, spread * 0.9, baseCol || [0,0,0]);
 
         artLayer.pop();
-        try { console.log('[Aether Soft] composite after fallback pop:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation); } catch (e) {}
       }
     }
   };

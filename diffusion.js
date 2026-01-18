@@ -347,7 +347,6 @@ const Fluid = (function(){
       // Ensure new ink is composited on top of existing content (defensive fix)
       try {
         if (artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation !== 'source-over') {
-          // If some code changed it to an odd mode (e.g. destination-over), force normal source-over
           artLayer.drawingContext.globalCompositeOperation = 'source-over';
         }
       } catch (_) { /* ignore if unavailable */ }
@@ -356,49 +355,33 @@ const Fluid = (function(){
         console.log('[Fluid] composite BEFORE execute:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation);
       } catch (e) { /* ignore */ }
 
-      // Robustness: draw engine output into a temporary offscreen buffer and then composite onto the real art layer
-      // This ensures the engine cannot accidentally draw 'behind' existing pixels using destination-over
-      let tmp = null;
+      // Call engine in isolated mode: engine draws into its own internal buffer and then composes onto the main artLayer
       try {
-        tmp = createGraphics(artLayer.width || width, artLayer.height || height);
-        // make sure tmp starts cleared and uses normal composite
-        try { if (tmp && typeof tmp.clear === 'function') tmp.clear(); } catch (e) {}
-        try { if (tmp && tmp.drawingContext) tmp.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) {}
+        // initialize engine buffer size if possible
+        try { if (typeof engine.init === 'function') engine.init({ width: artLayer.width || width, height: artLayer.height || height }); } catch (e) {}
 
-        // Temporarily point global artLayer to tmp so engines draw into this buffer
-        const prevLayer = window.artLayer;
-        window.artLayer = tmp;
-        try {
-          engine.execute(letter, x, y, chosenColor);
-        } finally {
-          // restore original art layer reference
-          window.artLayer = prevLayer;
-        }
+        // Execute into engine's internal buffer
+        engine.execute(letter, x, y, chosenColor);
 
-        // Composite tmp onto the real artLayer using BLEND/source-over so the rendered result is guaranteed on top
-        try {
-          if (artLayer && typeof artLayer.push === 'function') artLayer.push();
-          try { if (typeof artLayer.blendMode === 'function') artLayer.blendMode(BLEND); } catch (e) {}
-          try { if (artLayer && artLayer.drawingContext) artLayer.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) {}
-          try { console.log('[Fluid] compositing tmp onto artLayer with BLEND'); } catch (e) {}
-          artLayer.image(tmp, 0, 0);
-        } finally {
-          try { if (artLayer && typeof artLayer.pop === 'function') artLayer.pop(); } catch (e) {}
+        // Then let engine composite its buffer onto the real artLayer
+        if (typeof engine.compose === 'function') {
+          try { engine.compose(artLayer); } catch (e) { console.error('[Fluid] engine.compose failed', e); }
+        } else {
+          // fallback: if engine has no compose method, call it directly (legacy) — this may affect globals
+          try { engine.execute(letter, x, y, chosenColor); } catch (e) { console.error('[Fluid] legacy engine direct execute failed', e); }
         }
 
         try {
-          console.log('[Fluid] executed inking for', styleName, 'at', x, y, 'COMPOSITE_AFTER:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation);
+          console.log('[Fluid] executed inking for', styleName, 'at', x, y);
         } catch (e) { /* ignore */ }
       } catch (err) {
         console.error('[Fluid] engine.execute error (fallback to direct):', err);
-        // fallback to direct execution if buffering fails
+        // fallback to direct execution if something unexpected fails
         try {
           engine.execute(letter, x, y, chosenColor);
         } catch (err2) {
           console.error('Fluid style error (direct fallback)', err2);
         }
-      } finally {
-        try { if (tmp && typeof tmp.remove === 'function') tmp.remove(); } catch (e) { /* ignore */ }
       }
     } catch (err) {
       console.error('Fluid style error', err);

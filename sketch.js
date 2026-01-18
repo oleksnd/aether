@@ -69,9 +69,14 @@ function setup() {
 
   // Create isolated art layer
   artLayer = createGraphics(width, height);
-  window.artLayer = artLayer; // Make global for engines
-  // Initialize Fluid module with the art layer (module sets blend mode internally)
+  // Do NOT expose artLayer globally to engines. Initialize modules/engines explicitly so each stays isolated.
   if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
+
+  // Initialize available engines with their own internal buffers (full isolation)
+  try {
+    if (window.AetherSoftEngine && typeof window.AetherSoftEngine.init === 'function') window.AetherSoftEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
+  } catch (e) { /* ignore */ }
 
   // Wire up style selector: keep a small runtime state and listen for changes
   try {
@@ -585,6 +590,12 @@ function windowResized() {
 
   // Reinitialize fluid module with new layer
   if (typeof Fluid !== 'undefined' && Fluid.init) Fluid.init(artLayer);
+
+  // Reinitialize engines with new buffer size
+  try {
+    if (window.AetherSoftEngine && typeof window.AetherSoftEngine.init === 'function') window.AetherSoftEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
+  } catch (e) { /* ignore */ }
 
   // Recalculate cell dims
   cellWidth = width / gridCols;

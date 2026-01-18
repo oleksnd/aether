@@ -241,13 +241,23 @@
         function loadEngine(style) {
             if (loadedEngines.has(style)) return Promise.resolve();
             return new Promise((resolve) => {
-                const script = document.createElement('script');
-                script.src = `engines/${style}/engine.js`;
+                        const script = document.createElement('script');
+                // Prefer named engine file (engine.<style>.js) to avoid ambiguous engine.js files
+                const named = `engines/${style}/engine.${style}.js`;
+                const legacy = `engines/${style}/engine.js`;
+                script.src = named;
                 script.onload = () => {
                     loadedEngines.add(style);
                     resolve();
                 };
-                script.onerror = () => resolve(); // non-fatal
+                script.onerror = () => {
+                    // fallback to legacy path for backward compatibility
+                    const fallback = document.createElement('script');
+                    fallback.src = legacy;
+                    fallback.onload = () => { loadedEngines.add(style); resolve(); };
+                    fallback.onerror = () => resolve();
+                    document.head.appendChild(fallback);
+                };
                 document.head.appendChild(script);
             });
         }
