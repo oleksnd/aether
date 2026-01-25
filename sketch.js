@@ -22,7 +22,7 @@ function initShuffledAlphabet() {
   const letters = Object.keys(ALPHABET_DNA);
   // all available zone indices (grid size may be larger than number of letters)
   const totalZones = gridCols * gridRows;
-  const zones = Array.from({length: totalZones}, (_, i) => i);
+  const zones = Array.from({ length: totalZones }, (_, i) => i);
   shuffleArray(zones);
   shuffleArray(letters);
   RUNTIME_ALPHABET_MAP = {};
@@ -71,11 +71,11 @@ function loadBrushes(layer) {
       s.src = src;
       s.async = true;
       s.onload = () => {
-        try { console.log('[LoadScript] Loaded', src); } catch (e) {}
+        try { console.log('[LoadScript] Loaded', src); } catch (e) { }
         resolve(true);
       };
       s.onerror = () => {
-        try { console.warn('[LoadScript] Failed to load', src); } catch (e) {}
+        try { console.warn('[LoadScript] Failed to load', src); } catch (e) { }
         resolve(false);
       };
       document.head.appendChild(s);
@@ -106,6 +106,8 @@ function setup() {
   try {
     if (window.AetherSoftEngine && typeof window.AetherSoftEngine.init === 'function') window.AetherSoftEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.LiquidInkEngine && typeof window.LiquidInkEngine.init === 'function') window.LiquidInkEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.TrowelEngine && typeof window.TrowelEngine.init === 'function') window.TrowelEngine.init({ width: artLayer.width, height: artLayer.height });
   } catch (e) { /* ignore */ }
 
   // Wire up style selector: keep a small runtime state and listen for changes
@@ -117,7 +119,7 @@ function setup() {
       window.currentFluidStyle = styleSel.value;
       styleSel.addEventListener('change', (e) => {
         window.currentFluidStyle = e.target.value;
-        try { console.log('[UI] fluid style changed ->', window.currentFluidStyle); } catch (e) {}
+        try { console.log('[UI] fluid style changed ->', window.currentFluidStyle); } catch (e) { }
       });
     }
   } catch (e) { /* ignore in non-browser contexts */ }
@@ -171,7 +173,10 @@ function draw() {
   image(artLayer, 0, 0);
 
   // Update nozzle movement (process multiple steps per frame for turbo rendering)
-  for (let t = 0; t < TURBO_STEPS; t++) updateNozzle();
+  // Check style to adjust speed
+  let isLiquidInk = (typeof window.currentFluidStyle === 'string' && window.currentFluidStyle === 'liquid-ink');
+  let steps = isLiquidInk ? 2 : TURBO_STEPS; // Slow down for liquid ink to show the flow
+  for (let t = 0; t < steps; t++) updateNozzle();
 
   // Overlays: grid, letters, trails and highlights — toggled via window.showOverlays
   let overlays = (typeof window.showOverlays === 'undefined') ? true : window.showOverlays;
@@ -284,7 +289,7 @@ function startGeneration(text) {
         let x = random(minX, maxX);
         let y = random(minY, maxY);
 
-        path.push({x, y, letter});
+        path.push({ x, y, letter });
         highlightedCells.add(index);
       }
     }
@@ -302,7 +307,7 @@ function startGeneration(text) {
 
       if (!fluidCol) fluidCol = (typeof Fluid !== 'undefined' && Fluid.pickColor) ? Fluid.pickColor() : [255, 50, 50];
 
-      currentPaths.push({points: path, color: wordColors[colorIndex % wordColors.length], fluidColor: fluidCol});
+      currentPaths.push({ points: path, color: wordColors[colorIndex % wordColors.length], fluidColor: fluidCol });
       colorIndex++;
     }
   }
@@ -344,7 +349,7 @@ function updateNozzle() {
       nozzle.isMoving = false;
       // Add to visited
       let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
-      visitedPoints.push({x: nozzle.x, y: nozzle.y, letter: currentPoint.letter});
+      visitedPoints.push({ x: nozzle.x, y: nozzle.y, letter: currentPoint.letter });
       // Execute inking hook (delegated to Fluid module)
       if (typeof Fluid !== 'undefined' && Fluid.executeInking) {
         try {
@@ -394,7 +399,7 @@ function drawCurrentTrail() {
 
     // Draw arrow from last visited to nozzle
     if (visitedPoints.length > 0) {
-      drawArrowBetween(visitedPoints[visitedPoints.length - 1], {x: nozzle.x, y: nozzle.y}, color);
+      drawArrowBetween(visitedPoints[visitedPoints.length - 1], { x: nozzle.x, y: nozzle.y }, color);
     }
 
     // Draw markers for visited points
@@ -648,6 +653,8 @@ function windowResized() {
   try {
     if (window.AetherSoftEngine && typeof window.AetherSoftEngine.init === 'function') window.AetherSoftEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.LiquidInkEngine && typeof window.LiquidInkEngine.init === 'function') window.LiquidInkEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.TrowelEngine && typeof window.TrowelEngine.init === 'function') window.TrowelEngine.init({ width: artLayer.width, height: artLayer.height });
   } catch (e) { /* ignore */ }
 
   // Recalculate cell dims

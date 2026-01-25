@@ -235,34 +235,46 @@ window.LiquidInkEngine = (function () {
     let dx = x2 - x1, dy = y2 - y1;
     let distVal = sqrt(dx * dx + dy * dy) || 1;
 
-    // Massively increase base thickness for a "flooded" look
-    let baseThickness = map(constrain(distVal, 10, 400), 10, 400, 60, 25);
+    // MASSIVE thickness for true flooding/spilling effect
+    let baseThickness = map(constrain(distVal, 10, 400), 10, 400, 120, 50);
 
     // Normal vector
     let nx = -dy / distVal;
     let ny = dx / distVal;
 
-    // Build path with "turbulent surging"
-    let segments = Math.max(4, Math.floor(distVal / 15));
+    // Build path with "turbulent surging" and "breaks"
+    let segments = Math.max(5, Math.floor(distVal / 10));
     let path = [];
+    let isBroken = false;
+
     for (let i = 0; i <= segments; i++) {
       let t = i / segments;
       let px = lerp(x1, x2, t);
       let py = lerp(y1, y2, t);
-      // add wave wobble + surging (thickness changes)
-      let wobble = (noise(px * 0.012, py * 0.012, 100) - 0.5) * baseThickness * 2.0;
-      let surge = 0.7 + noise(px * 0.02, py * 0.02, 200) * 0.8;
+
+      // "Break" logic: sometimes the liquid stops flowing and starts again (splatter gap)
+      let turbulence = noise(px * 0.02, py * 0.02, i * 0.1);
+      if (random() < 0.05) isBroken = !isBroken;
+
+      // if broken, thickness is 0 (invisible connection)
+      let surge = isBroken ? 0 : (0.2 + turbulence * 2.0); // very varied surge
+
+      // EXTREME wobble for wide spread
+      let wobble = (noise(px * 0.01, py * 0.01, 100) - 0.5) * baseThickness * 5.0;
       path.push({ x: px + nx * wobble, y: py + ny * wobble, t: t, surge: surge });
     }
 
-    // Create organic thick poly from path
+    // Create organic thick poly from path - handle breaks by drawing sub-polys
+    // For simplicity in this engine, we just modulate thickness to 0 which creates a pinch
+    // A better approach is drawing separate blobs for disconnected parts
+
     let poly = [];
     for (let i = 0; i < path.length; i++) {
-      let thick = baseThickness * path[i].surge * (0.8 + noise(path[i].x * 0.02, path[i].y * 0.02) * 0.5);
+      let thick = baseThickness * path[i].surge * (0.5 + noise(path[i].x * 0.05, path[i].y * 0.05) * 1.0);
       poly.push({ x: path[i].x + nx * thick, y: path[i].y + ny * thick });
     }
     for (let i = path.length - 1; i >= 0; i--) {
-      let thick = baseThickness * (0.8 + noise(path[i].x * 0.02, path[i].y * 0.02) * 0.5);
+      let thick = baseThickness * path[i].surge * (0.5 + noise(path[i].x * 0.05, path[i].y * 0.05) * 1.0);
       poly.push({ x: path[i].x - nx * thick, y: path[i].y - ny * thick });
     }
 
@@ -307,20 +319,33 @@ window.LiquidInkEngine = (function () {
       gfx.endShape(CLOSE);
     }
 
-    // Satellite droplets and extra splatters along the path - heavier count
-    let splatterCount = Math.floor(distVal / 12);
-    for (let i = 0; i < splatterCount; i++) {
-      if (random() > 0.3) {
+    // MASSIVE satellite splatters and large puddles along path
+    let splatterChance = distVal * 0.3; // doubled frequency
+    let count = Math.floor(splatterChance);
+    if (random() < (splatterChance - count)) count++;
+
+    for (let i = 0; i < count; i++) {
+      if (random() > 0.2) {
         let t = random();
-        let off = random(-2.5, 2.5) * baseThickness;
-        let sx = lerp(x1, x2, t) + nx * off + randomGaussian() * 8;
-        let sy = lerp(y1, y2, t) + ny * off + randomGaussian() * 8;
-        if (random() > 0.45) {
-          drawOrganicShape(gfx, sx, sy, random(3, 10), color, random(10, 50));
+        let off = random(-4.0, 4.0) * baseThickness; // much wider spread
+        let sx = lerp(x1, x2, t) + nx * off + randomGaussian() * 15;
+        let sy = lerp(y1, y2, t) + ny * off + randomGaussian() * 15;
+
+        // Much larger organic shapes
+        if (random() > 0.3) {
+          drawOrganicShape(gfx, sx, sy, random(10, 35), color, random(15, 70));
         } else {
-          drawSplatter(gfx, sx, sy, color, random(0.4, 1.2));
+          drawSplatter(gfx, sx, sy, color, random(0.8, 2.0));
         }
       }
+    }
+
+    // Add random LARGE puddles along the path
+    if (random() > 0.6) {
+      let t = random();
+      let px = lerp(x1, x2, t) + randomGaussian() * baseThickness;
+      let py = lerp(y1, y2, t) + randomGaussian() * baseThickness;
+      drawDot(gfx, px, py, color, random(30, 80));
     }
 
     gfx.pop();
@@ -350,23 +375,24 @@ window.LiquidInkEngine = (function () {
 
       // if we have a previous letter, draw rectangle between prev and this letter
       if (_prev && _prev.x !== null) {
-        // Explosive splash at connection
-        drawSplatter(art, x, y, col, 1.6);
-
-        // Main fluid body
+        // Continuous flow - pure segment drawing
         drawDeformedRect(art, _prev.x, _prev.y, x, y, col);
 
-        // Flooding pools at nodes
-        if (random() > 0.55) {
-          drawDot(art, x, y, col, random(25, 55));
-          if (random() > 0.4) drawDrip(art, x, y, col, 12);
-          if (random() > 0.7) drawSplatter(art, x, y, col, 1.5);
+        // Frequent large pooling 
+        let stepDist = dist(_prev.x, _prev.y, x, y);
+        // More frequent and larger pools
+        if (random() > 0.7) {
+          drawDot(art, x, y, col, random(40, 90));
+          if (random() > 0.6) drawSplatter(art, x, y, col, 2.5);
         }
       } else {
-        // First point: Massive spill
-        drawDot(art, x, y, col, 45);
-        drawSplatter(art, x, y, col, 3.5);
-        for (let j = 0; j < 4; j++) drawDrip(art, x + random(-20, 20), y, col, 15);
+        // First point: HUGE initial spill
+        drawDot(art, x, y, col, 80);
+        drawSplatter(art, x, y, col, 4.0);
+        // Multiple drips from start
+        for (let j = 0; j < 5; j++) {
+          drawDrip(art, x + random(-30, 30), y, col, random(15, 25));
+        }
       }
 
       _prev.x = x; _prev.y = y; _prev.letter = letter;

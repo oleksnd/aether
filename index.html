@@ -1,320 +1,369 @@
- <!-- UI Не изменять он идеальный -->
+<!-- UI Не изменять он идеальный -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHER - Sequential Watercolor Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
-    <!-- p5.brush loader removed (loaded dynamically to avoid runtime errors) -->
-    <!-- Material Symbols for minimal export icon -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Courier New', monospace;
-            background: #f5f5f5;
-        }
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Courier New', monospace;
-            background: #f5f5f5;
-        }
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-        }
-        #ui {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: none;
-            z-index: 10;
-        }
-        #logo {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            height: 20px;
-            backdrop-filter: blur(10px);
-            background: rgba(255,255,255,0.1);
-            padding: 10px 20px;
-            border-radius: 10px;
-            pointer-events: auto;
-        }
-        #input-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            backdrop-filter: blur(10px);
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 10px;
-            pointer-events: auto;
-        }
-        textarea {
-            width: 400px;
-            height: 100px;
-            border: none;
-            outline: none;
-            background: rgba(255,255,255,0.5);
-            font-family: inherit;
-            font-size: 16px;
-            resize: none;
-            border-radius: 5px;
-            padding: 10px;
-        }
-        button {
-            display: block;
-            padding: 10px 20px;
-            border: none;
-            background: rgba(0,0,0,0.1);
-            color: #333;
-            font-family: inherit;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        button:hover {
-            background: rgba(0,0,0,0.2);
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHER - Sequential Watercolor Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <!-- p5.brush loader removed (loaded dynamically to avoid runtime errors) -->
+  <!-- Material Symbols for minimal export icon -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      background: #f5f5f5;
+    }
 
-        /* Export icon button (inline in export-wrap) */
-        #export-btn {
-            width: 36px;
-            height: 36px;
-            padding: 6px;
-            border-radius: 6px;
-            border: none;
-            background: transparent; /* icon-only: no white background */
-            box-shadow: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            pointer-events: auto;
-        }
-        #export-btn:hover { background: rgba(0,0,0,0.04); }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
 
-        /* Global Material Symbols settings */
-        .material-symbols-outlined {
-            font-family: 'Material Symbols Outlined';
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-            line-height: 1;
-        }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      background: #f5f5f5;
+    }
 
-        /* Icon styling: outlined save symbol */
-        #export-btn .material-symbols-outlined {
-            font-size: 20px;
-            color: #838384;
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-        }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
 
-        /* Simple toggle switch (overlay visibility) */
-        .toggle {
-            width: 36px;
-            height: 18px;
-            border-radius: 999px;
-            background: #eee;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            padding: 2px;
-            cursor: pointer;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
-            transition: background 150ms ease;
-        }
-        .toggle .toggle-knob {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-            transform: translateX(0);
-            transition: transform 160ms ease;
-        }
-        .toggle.on { background: #111; }
-        .toggle.on .toggle-knob { transform: translateX(18px); }
-        #overlay-label { font-family: 'Courier New', monospace; color: #111; }
-        #overlay-label.inactive { color: #777; }
+    #ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 10;
+    }
 
-        .example-btn { margin-right:8px; padding:6px 10px; font-size:13px; background:rgba(255,255,255,0.9); border-radius:6px; border:none; cursor:pointer; }
-        .example-btn:hover { background:rgba(255,255,255,1); }
-    </style>
+    #logo {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 20px;
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px 20px;
+      border-radius: 10px;
+      pointer-events: auto;
+    }
+
+    #input-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      pointer-events: auto;
+    }
+
+    textarea {
+      width: 400px;
+      height: 100px;
+      border: none;
+      outline: none;
+      background: rgba(255, 255, 255, 0.5);
+      font-family: inherit;
+      font-size: 16px;
+      resize: none;
+      border-radius: 5px;
+      padding: 10px;
+    }
+
+    button {
+      display: block;
+      padding: 10px 20px;
+      border: none;
+      background: rgba(0, 0, 0, 0.1);
+      color: #333;
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    /* Export icon button (inline in export-wrap) */
+    #export-btn {
+      width: 36px;
+      height: 36px;
+      padding: 6px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      /* icon-only: no white background */
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    #export-btn:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* Global Material Symbols settings */
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+    }
+
+    /* Icon styling: outlined save symbol */
+    #export-btn .material-symbols-outlined {
+      font-size: 20px;
+      color: #838384;
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Simple toggle switch (overlay visibility) */
+    .toggle {
+      width: 36px;
+      height: 18px;
+      border-radius: 999px;
+      background: #eee;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      padding: 2px;
+      cursor: pointer;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06) inset;
+      transition: background 150ms ease;
+    }
+
+    .toggle .toggle-knob {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      transform: translateX(0);
+      transition: transform 160ms ease;
+    }
+
+    .toggle.on {
+      background: #111;
+    }
+
+    .toggle.on .toggle-knob {
+      transform: translateX(18px);
+    }
+
+    #overlay-label {
+      font-family: 'Courier New', monospace;
+      color: #111;
+    }
+
+    #overlay-label.inactive {
+      color: #777;
+    }
+
+    .example-btn {
+      margin-right: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .example-btn:hover {
+      background: rgba(255, 255, 255, 1);
+    }
+  </style>
 </head>
+
 <body>
-    <div id="canvas-container"></div>
-    <div id="ui">
-        <img id="logo" src="assets/logo.svg" alt="Logo">
-        <!-- Export + overlay toggle (top-right) -->
-        <div id="export-wrap" style="position:absolute; top:12px; right:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
-          <!-- Label for overlay toggle -->
-          <span id="overlay-label" style="font-size:12px; color:#111; margin-right:6px; cursor:pointer; user-select:none;">Grid</span>
-          <!-- Overlay visibility toggle -->
-          <button id="overlay-toggle" title="Toggle overlays" aria-pressed="true" aria-label="Toggle overlays" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
+  <div id="canvas-container"></div>
+  <div id="ui">
+    <img id="logo" src="assets/logo.svg" alt="Logo">
+    <!-- Export + overlay toggle (top-right) -->
+    <div id="export-wrap"
+      style="position:absolute; top:12px; right:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
+      <!-- Label for overlay toggle -->
+      <span id="overlay-label"
+        style="font-size:12px; color:#111; margin-right:6px; cursor:pointer; user-select:none;">Grid</span>
+      <!-- Overlay visibility toggle -->
+      <button id="overlay-toggle" title="Toggle overlays" aria-pressed="true" aria-label="Toggle overlays"
+        class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
 
-                    <!-- A-Z toggle: show letters A-Z in order (default: ON). Turn OFF to randomize letters -->
-                    <span id="az-label" style="font-size:12px; color:#111; margin-right:6px; margin-left:6px; cursor:pointer; user-select:none;">A-Z</span>
-                    <button id="az-toggle" title="Toggle A-Z (alphabetical)" aria-pressed="true" aria-label="Toggle A-Z" class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
+      <!-- A-Z toggle: show letters A-Z in order (default: ON). Turn OFF to randomize letters -->
+      <span id="az-label"
+        style="font-size:12px; color:#111; margin-right:6px; margin-left:6px; cursor:pointer; user-select:none;">A-Z</span>
+      <button id="az-toggle" title="Toggle A-Z (alphabetical)" aria-pressed="true" aria-label="Toggle A-Z"
+        class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
 
-                    <!-- Style selector: choose rendering preset -->
-                    <select id="styleSelector" aria-label="Rendering style" style="margin-left:8px; padding:6px 8px; border-radius:6px;">
-                        <option value="aether-soft">Aether Soft</option>
-                        <option value="aether-soft-modern">Aether Soft Modern</option>
-                        <option value="liquid-ink">Liquid Ink</option>
-                    </select>
-          <!-- Export icon (Material Symbol) -->
-          <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined" aria-hidden="true">save</span></button>
-        </div>
-
-        <div id="input-container">
-            <textarea id="text-input">Small Things</textarea>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-              <button id="generate-btn">Generate</button>
-            </div>
-        </div>
+      <!-- Style selector: choose rendering preset -->
+      <select id="styleSelector" aria-label="Rendering style"
+        style="margin-left:8px; padding:6px 8px; border-radius:6px;">
+        <option value="aether-soft">Aether Soft</option>
+        <option value="aether-soft-modern">Aether Soft Modern</option>
+        <option value="liquid-ink">Liquid Ink</option>
+        <option value="trowel">Trowel</option>
+      </select>
+      <!-- Export icon (Material Symbol) -->
+      <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined"
+          aria-hidden="true">save</span></button>
     </div>
-    <script src="dna.js"></script>
-    <script src="palettes/palette.js"></script>
-    <script src="diffusion.js"></script>
-    <script src="sketch.js"></script>
-    <script>
-        // Generate
-        document.getElementById('generate-btn').addEventListener('click', () => {
-            window.startGeneration(document.getElementById('text-input').value);
-        });
 
-        // Export (art layer only)
-        document.getElementById('export-btn').addEventListener('click', () => {
-            if (typeof window.exportPNG === 'function') window.exportPNG();
-        });
+    <div id="input-container">
+      <textarea id="text-input">Small Things</textarea>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button id="generate-btn">Generate</button>
+      </div>
+    </div>
+  </div>
+  <script src="dna.js"></script>
+  <script src="palettes/palette.js"></script>
+  <script src="diffusion.js"></script>
+  <script src="sketch.js"></script>
+  <script>
+    // Generate
+    document.getElementById('generate-btn').addEventListener('click', () => {
+      window.startGeneration(document.getElementById('text-input').value);
+    });
 
-        // Overlay toggle: show/hide grid/letters/paths (default: visible)
-        (function(){
-          const toggle = document.getElementById('overlay-toggle');
-          const label = document.getElementById('overlay-label');
-          // Start state
-          window.showOverlays = true;
+    // Export (art layer only)
+    document.getElementById('export-btn').addEventListener('click', () => {
+      if (typeof window.exportPNG === 'function') window.exportPNG();
+    });
 
-          function updateUI(state) {
-            if (!toggle) return;
-            toggle.classList.toggle('on', state);
-            toggle.setAttribute('aria-pressed', String(state));
-            if (label) label.classList.toggle('inactive', !state);
-          }
+    // Overlay toggle: show/hide grid/letters/paths (default: visible)
+    (function () {
+      const toggle = document.getElementById('overlay-toggle');
+      const label = document.getElementById('overlay-label');
+      // Start state
+      window.showOverlays = true;
 
+      function updateUI(state) {
+        if (!toggle) return;
+        toggle.classList.toggle('on', state);
+        toggle.setAttribute('aria-pressed', String(state));
+        if (label) label.classList.toggle('inactive', !state);
+      }
+
+      updateUI(window.showOverlays);
+
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          window.showOverlays = !window.showOverlays;
           updateUI(window.showOverlays);
+        });
+      }
 
-          if (toggle) {
-            toggle.addEventListener('click', () => {
-              window.showOverlays = !window.showOverlays;
-              updateUI(window.showOverlays);
-            });
-          }
+      if (label) {
+        // clicking label toggles overlays too
+        label.addEventListener('click', () => {
+          if (toggle) toggle.click();
+        });
+      }
+    })();
 
-          if (label) {
-            // clicking label toggles overlays too
-            label.addEventListener('click', () => {
-              if (toggle) toggle.click();
-            });
-          }
-        })();
+    // A-Z toggle: show letters A-Z in order by default (ON). When OFF, letters are randomized.
+    (function () {
+      const toggle = document.getElementById('az-toggle');
+      const label = document.getElementById('az-label');
 
-        // A-Z toggle: show letters A-Z in order by default (ON). When OFF, letters are randomized.
-        (function(){
-          const toggle = document.getElementById('az-toggle');
-          const label = document.getElementById('az-label');
+      // Default to A-Z enabled if not previously set
+      window.sequentialAlphabet = (typeof window.sequentialAlphabet === 'undefined') ? true : window.sequentialAlphabet;
 
-          // Default to A-Z enabled if not previously set
-          window.sequentialAlphabet = (typeof window.sequentialAlphabet === 'undefined') ? true : window.sequentialAlphabet;
+      function updateUI(state) {
+        if (!toggle) return;
+        toggle.classList.toggle('on', state);
+        toggle.setAttribute('aria-pressed', String(state));
+        if (label) label.classList.toggle('inactive', !state);
+      }
 
-          function updateUI(state) {
-            if (!toggle) return;
-            toggle.classList.toggle('on', state);
-            toggle.setAttribute('aria-pressed', String(state));
-            if (label) label.classList.toggle('inactive', !state);
-          }
+      updateUI(window.sequentialAlphabet);
 
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          window.sequentialAlphabet = !window.sequentialAlphabet;
           updateUI(window.sequentialAlphabet);
 
-          if (toggle) {
-            toggle.addEventListener('click', () => {
-              window.sequentialAlphabet = !window.sequentialAlphabet;
-              updateUI(window.sequentialAlphabet);
-
-              // Apply mapping immediately
-              if (window.sequentialAlphabet) {
-                // Use DNA mapping (alphabetical)
-                try { RUNTIME_ALPHABET_MAP = null; } catch (e) { /* ignore */ }
-              } else {
-                // Enable randomized runtime mapping
-                try { initShuffledAlphabet(); } catch (e) { RUNTIME_ALPHABET_MAP = null; }
-              }
-            });
+          // Apply mapping immediately
+          if (window.sequentialAlphabet) {
+            // Use DNA mapping (alphabetical)
+            try { RUNTIME_ALPHABET_MAP = null; } catch (e) { /* ignore */ }
+          } else {
+            // Enable randomized runtime mapping
+            try { initShuffledAlphabet(); } catch (e) { RUNTIME_ALPHABET_MAP = null; }
           }
-
-          if (label) {
-            // clicking label toggles A-Z too
-            label.addEventListener('click', () => {
-              if (toggle) toggle.click();
-            });
-          }
-        })();
-    </script>
-    <script>
-        // Dynamic engine loading
-        let loadedEngines = new Set();
-
-        function loadEngine(style) {
-            if (loadedEngines.has(style)) return Promise.resolve();
-            return new Promise((resolve) => {
-                        const script = document.createElement('script');
-                // Prefer named engine file (engine.<style>.js) to avoid ambiguous engine.js files
-                const named = `engines/${style}/engine.${style}.js`;
-                const legacy = `engines/${style}/engine.js`;
-                script.src = named;
-                script.onload = () => {
-                    loadedEngines.add(style);
-                    resolve();
-                };
-                script.onerror = () => {
-                    // fallback to legacy path for backward compatibility
-                    const fallback = document.createElement('script');
-                    fallback.src = legacy;
-                    fallback.onload = () => { loadedEngines.add(style); resolve(); };
-                    fallback.onerror = () => resolve();
-                    document.head.appendChild(fallback);
-                };
-                document.head.appendChild(script);
-            });
-        }
-
-        // Load default engine
-        loadEngine('aether-soft');
-
-        // Load engine on style change
-        document.getElementById('styleSelector').addEventListener('change', (e) => {
-            loadEngine(e.target.value);
         });
-    </script>
+      }
+
+      if (label) {
+        // clicking label toggles A-Z too
+        label.addEventListener('click', () => {
+          if (toggle) toggle.click();
+        });
+      }
+    })();
+  </script>
+  <script>
+    // Dynamic engine loading
+    let loadedEngines = new Set();
+
+    function loadEngine(style) {
+      if (loadedEngines.has(style)) return Promise.resolve();
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        // Prefer named engine file (engine.<style>.js) to avoid ambiguous engine.js files
+        const named = `engines/${style}/engine.${style}.js`;
+        const legacy = `engines/${style}/engine.js`;
+        script.src = named;
+        script.onload = () => {
+          loadedEngines.add(style);
+          resolve();
+        };
+        script.onerror = () => {
+          // fallback to legacy path for backward compatibility
+          const fallback = document.createElement('script');
+          fallback.src = legacy;
+          fallback.onload = () => { loadedEngines.add(style); resolve(); };
+          fallback.onerror = () => resolve();
+          document.head.appendChild(fallback);
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // Load default engine
+    loadEngine('aether-soft');
+
+    // Load engine on style change
+    document.getElementById('styleSelector').addEventListener('change', (e) => {
+      loadEngine(e.target.value);
+    });
+  </script>
 </body>
+
 </html>
