@@ -166,8 +166,8 @@ function setup() {
 }
 
 function draw() {
-  // Clear canvas
-  background(255);
+  // Clear canvas with background color
+  background(window.darkMode ? '#141414' : 255);
 
   // Draw art layer first (for future watercolor)
   image(artLayer, 0, 0);
@@ -199,7 +199,7 @@ function draw() {
 }
 
 function drawGrid() {
-  stroke(240); // Very light gray
+  stroke(window.darkMode ? 40 : 240); // Darker lines for dark mode, lighter for light mode
   strokeWeight(1);
   noFill();
 
@@ -218,7 +218,7 @@ function drawGrid() {
   // Draw letters in centers (letters are randomized via runtime map)
   textAlign(CENTER, CENTER);
   textSize(16);
-  fill(150); // Light gray, quiet
+  fill(window.darkMode ? 100 : 150); // Muted colors for dark/light modes
   noStroke();
 
   // Build inverse mapping: zone -> letter
@@ -622,12 +622,21 @@ function exportPNG(filename) {
     name = 'aether-' + ts + '.png';
   }
 
-  // Extract a p5.Image snapshot of the art layer
-  let img = artLayer.get();
+  // Create a temporary graphics buffer to hold the background + artlayer
+  let exportBuffer = createGraphics(artLayer.width, artLayer.height);
 
-  // Save the image as PNG — this will preserve transparency
-  save(img, name);
-  console.log('Exported PNG:', name);
+  // Fill background according to current mode
+  exportBuffer.background(window.darkMode ? '#141414' : 255);
+
+  // Draw the art layer on top of the background
+  exportBuffer.image(artLayer, 0, 0);
+
+  // Save the result — this ensures the file has a background instead of transparency
+  save(exportBuffer, name);
+  console.log('Exported PNG (with background):', name);
+
+  // Cleanup buffer
+  exportBuffer.remove();
 }
 
 // Expose as a global so index.html's export button can call it

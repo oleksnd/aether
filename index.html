@@ -55,14 +55,10 @@
 
     #logo {
       position: absolute;
-      top: 20px;
+      top: 30px;
       left: 50%;
       transform: translateX(-50%);
       height: 20px;
-      backdrop-filter: blur(10px);
-      background: rgba(255, 255, 255, 0.1);
-      padding: 10px 20px;
-      border-radius: 10px;
       pointer-events: auto;
     }
 
@@ -198,6 +194,70 @@
     .example-btn:hover {
       background: rgba(255, 255, 255, 1);
     }
+
+    /* Dark mode adjustments */
+    body.dark-mode {
+      background: #141414;
+    }
+
+    body.dark-mode #overlay-label,
+    body.dark-mode #az-label,
+    body.dark-mode #dark-label {
+      color: #eee !important;
+    }
+
+    body.dark-mode .toggle {
+      background: #333;
+    }
+
+    body.dark-mode .toggle.on {
+      background: #eee;
+    }
+
+    body.dark-mode .toggle.on .toggle-knob {
+      background: #141414;
+    }
+
+    body.dark-mode #styleSelector {
+      background: #333;
+      color: #eee;
+      border: 1px solid #444;
+    }
+
+    body.dark-mode textarea {
+      background: rgba(0, 0, 0, 0.5);
+      color: #eee;
+    }
+
+    body.dark-mode button#generate-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #eee;
+    }
+
+    body.dark-mode button#generate-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    body.dark-mode #input-container {
+      background: rgba(0, 0, 0, 0.4) !important;
+      backdrop-filter: blur(20px) !important;
+    }
+
+    body.dark-mode #logo {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      filter: invert(1) brightness(100%);
+    }
+
+    #logo,
+    #input-container,
+    body,
+    .toggle,
+    #styleSelector,
+    textarea,
+    button {
+      transition: background 0.3s ease, color 0.3s ease, filter 0.3s ease, border-color 0.3s ease;
+    }
   </style>
 </head>
 
@@ -220,6 +280,12 @@
         style="font-size:12px; color:#111; margin-right:6px; margin-left:6px; cursor:pointer; user-select:none;">A-Z</span>
       <button id="az-toggle" title="Toggle A-Z (alphabetical)" aria-pressed="true" aria-label="Toggle A-Z"
         class="toggle on"><span class="toggle-knob" aria-hidden="true"></span></button>
+
+      <!-- DARK mode toggle -->
+      <span id="dark-label"
+        style="font-size:12px; color:#111; margin-right:6px; margin-left:6px; cursor:pointer; user-select:none;">Dark</span>
+      <button id="dark-toggle" title="Toggle Dark Mode" aria-pressed="false" aria-label="Toggle Dark Mode"
+        class="toggle"><span class="toggle-knob" aria-hidden="true"></span></button>
 
       <!-- Style selector: choose rendering preset -->
       <select id="styleSelector" aria-label="Rendering style"
@@ -322,6 +388,33 @@
 
       if (label) {
         // clicking label toggles A-Z too
+        label.addEventListener('click', () => {
+          if (toggle) toggle.click();
+        });
+      }
+    })();
+
+    // Dark Mode toggle
+    (function () {
+      const toggle = document.getElementById('dark-toggle');
+      const label = document.getElementById('dark-label');
+      window.darkMode = false;
+
+      function updateUI(state) {
+        if (!toggle) return;
+        toggle.classList.toggle('on', state);
+        toggle.setAttribute('aria-pressed', String(state));
+        document.body.classList.toggle('dark-mode', state);
+      }
+
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          window.darkMode = !window.darkMode;
+          updateUI(window.darkMode);
+        });
+      }
+
+      if (label) {
         label.addEventListener('click', () => {
           if (toggle) toggle.click();
         });
