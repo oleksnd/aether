@@ -1,27 +1,38 @@
 // AETHER Fluid Diffusion Module
 // Responsible for fluid palette, diffusion parameters, and rendering ink splashes on an offscreen artLayer.
 
-const Fluid = (function(){
+const Fluid = (function () {
   // Fluid palette can be provided by a separate palette script as
   // window.CUSTOM_FLUID_PALETTE_ITEMS = [{id,name,hex,rgb:[r,g,b]}...]
   // Build internal FLUID_PALETTE (array of RGB arrays) from that if present,
   // otherwise fall back to a small default palette.
-  let FLUID_PALETTE = null;
-  try {
-    if (typeof window !== 'undefined' && Array.isArray(window.CUSTOM_FLUID_PALETTE_ITEMS) && window.CUSTOM_FLUID_PALETTE_ITEMS.length > 0) {
-      FLUID_PALETTE = window.CUSTOM_FLUID_PALETTE_ITEMS.map(it => Array.isArray(it.rgb) ? it.rgb.slice() : [255,0,0]);
-      // Expose metadata for UI if needed
-      if (typeof window !== 'undefined') window.FLUID_PALETTE_META = window.CUSTOM_FLUID_PALETTE_ITEMS.map(it => ({ id: it.id, name: it.name, hex: it.hex }));
-    }
-  } catch (e) { FLUID_PALETTE = null; }
+  // Internal state for the current active palette
+  let CURRENT_ACTIVE_PALETTE = null;
 
-  if (!Array.isArray(FLUID_PALETTE) || FLUID_PALETTE.length === 0) {
-    FLUID_PALETTE = [
-      [255, 50, 50],
-      [255, 200, 0],
-      [50, 50, 255]
-    ];
+  function refreshPalette() {
+    let paletteId = window.SELECTED_PALETTE_ID;
+    let palettes = window.PALETTES || [];
+
+    let selected = palettes.find(p => p.id === paletteId);
+    if (!selected && palettes.length > 0) {
+      // Pick random if none selected or not found
+      selected = palettes[Math.floor(Math.random() * palettes.length)];
+    }
+
+    if (selected) {
+      CURRENT_ACTIVE_PALETTE = selected.colors.map(hex => hexToRgb(hex));
+      // Expose for UI
+      if (typeof window !== 'undefined') {
+        window.CURRENT_ACTIVE_PALETTE_METADATA = selected;
+      }
+    } else {
+      // Fallback
+      CURRENT_ACTIVE_PALETTE = [[255, 50, 50], [255, 200, 0], [50, 50, 255]];
+    }
   }
+
+  // Initial refresh
+  refreshPalette();
 
   // Diffusion engine parameters (coalescence / puddle mode) - kept for potential future use
   const DIFFUSION = {
@@ -44,48 +55,48 @@ const Fluid = (function(){
     blurPx: 8,
     grainDensity: 0.6
   };
-  
+
   let lastInk = { x: null, y: null, time: 0, size: 0, alpha: 0 };
   // Convert HSL back to RGB array
-    function hslToRgb(h, s, l) {
-      h /= 360; s /= 100; l /= 100;
-      let r, g, b;
-      if (s === 0) { r = g = b = l; }
-      else {
-        function hue2rgb(p, q, t) {
-          if (t < 0) t += 1;
-          if (t > 1) t -= 1;
-          if (t < 1/6) return p + (q - p) * 6 * t;
-          if (t < 1/2) return q;
-          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-          return p;
-        }
-        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        let p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1/3);
-        g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1/3);
+  function hslToRgb(h, s, l) {
+    h /= 360; s /= 100; l /= 100;
+    let r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      function hue2rgb(p, q, t) {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
       }
-      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+      let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      let p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
     }
-  
-    // Convert RGB to HSL object {h,s,l} where h in degrees, s,l in percentage
-    function rgbToHsl(r, g, b) {
-      r /= 255; g /= 255; b /= 255;
-      let max = Math.max(r, g, b), min = Math.min(r, g, b);
-      let h = 0, s = 0, l = (max + min) / 2;
-      if (max !== min) {
-        let d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-          case g: h = (b - r) / d + 2; break;
-          case b: h = (r - g) / d + 4; break;
-        }
-        h /= 6;
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+
+  // Convert RGB to HSL object {h,s,l} where h in degrees, s,l in percentage
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    let max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+    if (max !== min) {
+      let d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
       }
-      return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+      h /= 6;
     }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
 
   // Add wet-on-wet highlights: small bright strokes inside the puddle
   function applyHighlights(gfx, cx, cy, baseRadius) {
@@ -218,18 +229,18 @@ const Fluid = (function(){
   }
 
   function pickColor() {
-    return FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))];
+    return CURRENT_ACTIVE_PALETTE[Math.floor(random(0, CURRENT_ACTIVE_PALETTE.length))];
   }
 
   // Pick a color that's not present in `usedList` (array of RGB arrays).
   // Falls back to `pickColor()` if all colors are used or input is invalid.
   function pickColorDistinct(usedList) {
     try {
-      if (!Array.isArray(FLUID_PALETTE)) return pickColor();
+      if (!Array.isArray(CURRENT_ACTIVE_PALETTE)) return pickColor();
       // Normalize usedList to list of strings for quick comparison
       let used = Array.isArray(usedList) ? usedList.map(c => Array.isArray(c) ? c.join(',') : String(c)) : [];
       // candidates = palette colors not present in used
-      let candidates = FLUID_PALETTE.filter(col => used.indexOf(Array.isArray(col) ? col.join(',') : String(col)) === -1);
+      let candidates = CURRENT_ACTIVE_PALETTE.filter(col => used.indexOf(Array.isArray(col) ? col.join(',') : String(col)) === -1);
       if (candidates.length > 0) {
         // choose randomly among unused candidates to provide random ordering
         let pick = candidates[Math.floor(random(0, candidates.length))];
@@ -239,7 +250,7 @@ const Fluid = (function(){
       // ignore and fallback
     }
     // all used or error — return a random color from the full palette
-    return FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))].slice ? FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))].slice() : FLUID_PALETTE[Math.floor(random(0, FLUID_PALETTE.length))];
+    return CURRENT_ACTIVE_PALETTE[Math.floor(random(0, CURRENT_ACTIVE_PALETTE.length))].slice ? CURRENT_ACTIVE_PALETTE[Math.floor(random(0, CURRENT_ACTIVE_PALETTE.length))].slice() : CURRENT_ACTIVE_PALETTE[Math.floor(random(0, CURRENT_ACTIVE_PALETTE.length))];
   }
 
   // Recursive subdivision + deformation of a polygon contour (Tyler Hobbs style)
@@ -358,7 +369,7 @@ const Fluid = (function(){
       // Call engine in isolated mode: engine draws into its own internal buffer and then composes onto the main artLayer
       try {
         // initialize engine buffer size if possible
-        try { if (typeof engine.init === 'function') engine.init({ width: artLayer.width || width, height: artLayer.height || height }); } catch (e) {}
+        try { if (typeof engine.init === 'function') engine.init({ width: artLayer.width || width, height: artLayer.height || height }); } catch (e) { }
 
         // Execute into engine's internal buffer
         engine.execute(letter, x, y, chosenColor);
@@ -390,11 +401,12 @@ const Fluid = (function(){
 
   return {
     init,
+    refreshPalette,
     pickColor,
     pickColorDistinct,
     executeInking,
     // Expose params for runtime tweaking if needed
     DIFFUSION,
-    FLUID_PALETTE
+    CURRENT_ACTIVE_PALETTE
   };
 })();

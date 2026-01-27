@@ -251,6 +251,9 @@ function parseInput(text) {
 }
 
 function startGeneration(text) {
+  // Refresh the palette (choose random if none selected)
+  if (typeof Fluid !== 'undefined' && Fluid.refreshPalette) Fluid.refreshPalette();
+
   // Parse the input into words
   let wordArrays = parseInput(text);
 

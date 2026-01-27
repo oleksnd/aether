@@ -1,230 +1,233 @@
-// Trowel Engine V7: "The Wet Brush"
-// Organic fluid strokes using overlapping circles, not geometric quads
+// Trowel Engine V8: "The Wet Scrubbing Trowel"
+// A high-performance, painterly engine that simulates thick, wet paint being scrubbed onto a surface.
+// Focuses on "back-and-forth" movement and organic, layered texture.
+
 window.TrowelEngine = (function () {
-    const BUFFER_CLEAR = true;
-    const BRUSH_SIZE = 160; // WIDE brush
-    const DROPS_PER_STEP = 8; // Dense coverage
-
-    // POLLOCK PALETTE
-    const PALETTE = [
-        [30, 30, 140],    // Deep Blue
-        [15, 15, 15],     // Near Black
-        [180, 20, 40],    // Crimson Red
-        [80, 20, 140],    // Dark Violet
-        [20, 100, 100],   // Dark Teal
-        [200, 80, 30],    // Burnt Orange
-    ];
-    let _colorIdx = 0;
-
     let _buffer = null;
     let _prev = { x: null, y: null };
-    let _pos = { x: 0, y: 0 };
-    let _vel = { x: 0, y: 0 };
-    let _paintLoad = 1.0;
+    const BRUSH_THICKNESS = 45;
+    const SCRUB_JITTER = 15;
+    const NOISE_SCALE = 0.02;
 
     function init(opts) {
-        try {
-            const w = opts && opts.width ? opts.width : (typeof width !== 'undefined' ? width : 800);
-            const h = opts && opts.height ? opts.height : (typeof height !== 'undefined' ? height : 600);
+        const w = opts?.width || (typeof width !== 'undefined' ? width : 800);
+        const h = opts?.height || (typeof height !== 'undefined' ? height : 600);
+        if (!_buffer || _buffer.width !== w || _buffer.height !== h) {
             _buffer = createGraphics(w, h);
-            if (BUFFER_CLEAR) _buffer.clear();
-        } catch (e) { _buffer = null; }
+            _buffer.clear();
+        }
     }
 
     function compose(target) {
-        try {
-            if (!_buffer || !target) return;
+        if (_buffer && target) {
             target.image(_buffer, 0, 0);
-        } catch (e) { }
+        }
     }
 
     function dispose() {
-        try { if (_buffer && typeof _buffer.remove === 'function') _buffer.remove(); } catch (e) { }
+        if (_buffer && typeof _buffer.remove === 'function') _buffer.remove();
         _buffer = null;
         _prev = { x: null, y: null };
     }
 
-    // Draw a single "ink blob" - the atomic unit of our brush
-    function inkBlob(gfx, x, y, size, color, alpha) {
+    /**
+     * Main entry point for inking.
+     * @param {string} letter 
+     * @param {number} tx 
+     * @param {number} ty 
+     * @param {number[]} chosenColor [r, g, b]
+     */
+    function execute(letter, tx, ty, chosenColor) {
+        if (!_buffer) init();
+
+        const col = Array.isArray(chosenColor) ? chosenColor.slice() : [0, 0, 0];
+
+        // Reset chain on word boundaries/whitespace
+        if (!letter || (typeof letter === 'string' && letter.trim() === '')) {
+            _prev = { x: null, y: null };
+            return;
+        }
+
+        // First letter of a word: initial blotch
+        if (_prev.x === null) {
+            drawInitialImpact(_buffer, tx, ty, col);
+            _prev = { x: tx, y: ty };
+            return;
+        }
+
+        // Standard movement: scrubbing stroke from _prev to (tx, ty)
+        performScrubbingStroke(_buffer, _prev.x, _prev.y, tx, ty, col);
+
+        _prev = { x: tx, y: ty };
+    }
+
+    /**
+     * Draws a heavy splash of paint where the brush first hits the paper.
+     */
+    function drawInitialImpact(gfx, x, y, color) {
+        const ctx = gfx.drawingContext;
+        ctx.save();
+
+        // Wet highlight effect
+        ctx.shadowColor = `rgba(${color[0]},${color[1]},${color[2]}, 0.6)`;
+        ctx.shadowBlur = 30;
+
         gfx.noStroke();
-        gfx.fill(color[0], color[1], color[2], alpha);
+        const blotchSize = random(50, 80);
 
-        // Main blob
-        gfx.ellipse(x, y, size, size * random(0.8, 1.2));
+        // Core of the impact
+        for (let i = 0; i < 6; i++) {
+            let alpha = map(i, 0, 5, 120, 20);
+            let s = blotchSize * (1 - i * 0.12);
+            gfx.fill(color[0], color[1], color[2], alpha);
+            gfx.ellipse(x + randomGaussian() * 5, y + randomGaussian() * 5, s, s * 0.85);
+        }
 
-        // Smaller satellite blobs for organic edge
-        if (random() > 0.6) {
-            let offX = random(-size * 0.4, size * 0.4);
-            let offY = random(-size * 0.4, size * 0.4);
-            gfx.ellipse(x + offX, y + offY, size * 0.4, size * 0.4);
+        // Directional splatters
+        for (let i = 0; i < 15; i++) {
+            let ang = random(TWO_PI);
+            let dist = random(10, 50);
+            let sz = random(2, 6);
+            gfx.fill(color[0], color[1], color[2], random(100, 200));
+            gfx.ellipse(x + cos(ang) * dist, y + sin(ang) * dist, sz, sz);
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Decomposes a segment into multiple "back-and-forth" scrubbing motions.
+     */
+    function performScrubbingStroke(gfx, x1, y1, x2, y2, color) {
+        const d = dist(x1, y1, x2, y2);
+        const angle = atan2(y2 - y1, x2 - x1);
+        const pX = -sin(angle); // Perpendicular X
+        const pY = cos(angle);  // Perpendicular Y
+
+        const segments = Math.max(2, Math.floor(d / 25));
+
+        for (let i = 0; i < segments; i++) {
+            let tStart = i / segments;
+            let tEnd = (i + 1) / segments;
+
+            // Control points for the scrubbing cycle
+            let pA = { x: lerp(x1, x2, tStart), y: lerp(y1, y2, tStart) };
+            let pB = { x: lerp(x1, x2, tEnd), y: lerp(y1, y2, tEnd) };
+
+            // The "Back" point in the middle of the segment
+            let pBack = { x: lerp(pA.x, pB.x, 0.4), y: lerp(pA.y, pB.y, 0.4) };
+            let pFore = { x: lerp(pA.x, pB.x, 0.8), y: lerp(pA.y, pB.y, 0.8) };
+
+            // Wide, painterly strokes for each "scrub"
+            // Jitter adds the organic "hand-painted" look
+            const offset = (amt) => ({ x: pX * amt, y: pY * amt });
+
+            let scrubAmt = SCRUB_JITTER * (0.8 + noise(tStart * 5) * 1.5);
+
+            // 1. Scrub forward
+            drawPainterlySegment(gfx,
+                pA.x + offset(scrubAmt).x, pA.y + offset(scrubAmt).y,
+                pFore.x + offset(-scrubAmt).x, pFore.y + offset(-scrubAmt).y,
+                color, 1.0);
+
+            // 2. Scrub backward
+            drawPainterlySegment(gfx,
+                pFore.x + offset(-scrubAmt * 1.2).x, pFore.y + offset(-scrubAmt * 1.2).y,
+                pBack.x + offset(scrubAmt * 0.8).x, pBack.y + offset(scrubAmt * 0.8).y,
+                color, 0.7); // Light coverage on backstroke
+
+            // 3. Final push to the end of segment
+            drawPainterlySegment(gfx,
+                pBack.x + offset(scrubAmt).x, pBack.y + offset(scrubAmt).y,
+                pB.x + offset(-scrubAmt * 0.5).x, pB.y + offset(-scrubAmt * 0.5).y,
+                color, 1.1); // Heavy build up
         }
     }
 
-    // Splatter - just random dots, no connecting lines
-    function splatter(gfx, x, y, color, intensity) {
-        let count = floor(random(5, 20) * intensity);
-        gfx.noStroke();
-
-        for (let i = 0; i < count; i++) {
-            let angle = random(TWO_PI);
-            let dist = random(20, 120) * intensity;
-            let px = x + cos(angle) * dist;
-            let py = y + sin(angle) * dist;
-            let sz = random(3, 12);
-
-            gfx.fill(color[0] * 0.8, color[1] * 0.8, color[2] * 0.8, random(180, 255));
-            gfx.ellipse(px, py, sz, sz);
-        }
-    }
-
-    // Gravity drip - vertical organic line
-    function drip(gfx, x, y, color) {
-        let length = random(40, 150);
-        let width = random(3, 8);
-        let cx = x, cy = y;
-
-        gfx.noStroke();
-        for (let i = 0; i < 20; i++) {
-            let t = i / 20;
-            let sz = width * (1 - t * 0.7); // Taper
-            cx += (noise(cy * 0.05, i) - 0.5) * 6;
-            cy += length / 20;
-
-            gfx.fill(color[0] * 0.5, color[1] * 0.5, color[2] * 0.5, 200);
-            gfx.ellipse(cx, cy, sz, sz * 1.5);
-        }
-        // Bulb at end
-        gfx.fill(color[0] * 0.4, color[1] * 0.4, color[2] * 0.4, 255);
-        gfx.ellipse(cx, cy, width * 2, width * 2.5);
-    }
-
-    // The main stroke rendering - organic blob trail
-    function renderWetStroke(gfx, ox, oy, nx, ny, color, load) {
-        let d = dist(ox, oy, nx, ny);
+    /**
+     * Draws a single wide, textured "blade" of paint with inner bristle details.
+     */
+    function drawPainterlySegment(gfx, x1, y1, x2, y2, color, load) {
+        const d = dist(x1, y1, x2, y2);
         if (d < 1) return;
 
-        let steps = max(1, floor(d / 5));
-        let angle = atan2(ny - oy, nx - ox);
-        let perpX = -sin(angle);
-        let perpY = cos(angle);
+        const angle = atan2(y2 - y1, x2 - x1);
+        const pX = -sin(angle);
+        const pY = cos(angle);
 
-        // Dynamic brush size based on pressure/speed
-        let currentSize = BRUSH_SIZE * load * random(0.8, 1.3);
+        const steps = Math.ceil(d / 4);
+        const ctx = gfx.drawingContext;
 
-        gfx.push();
+        ctx.save();
+        // Wet-on-wet shadow glow
+        ctx.shadowColor = `rgba(${color[0]},${color[1]},${color[2]}, ${0.2 * load})`;
+        ctx.shadowBlur = 8;
 
-        // Draw blob trail along the path
+        gfx.noStroke();
+
         for (let i = 0; i <= steps; i++) {
             let t = i / steps;
-            let px = lerp(ox, nx, t);
-            let py = lerp(oy, ny, t);
+            let cx = lerp(x1, x2, t);
+            let cy = lerp(y1, y2, t);
 
-            // Add natural wobble - MORE CHAOS
-            px += (noise(py * 0.02, i) - 0.5) * 40;
-            py += (noise(px * 0.02, i + 100) - 0.5) * 40;
+            // Noise-driven variation in paint thickness and texture
+            let flowNoise = noise(cx * NOISE_SCALE, cy * NOISE_SCALE, t * 10);
 
-            // Draw multiple blobs per step for thickness
-            for (let j = 0; j < DROPS_PER_STEP; j++) {
-                let spread = (j / DROPS_PER_STEP - 0.5) * currentSize;
-                let bx = px + perpX * spread + random(-20, 20);
-                let by = py + perpY * spread + random(-20, 20);
-                let bSize = currentSize * random(0.25, 0.8);
-                let alpha = map(load, 0.1, 1.0, 150, 255);
+            // Draw 8-12 parallel "bristles" or "paint streaks"
+            const bristleCount = 8;
+            for (let b = 0; b < bristleCount; b++) {
+                let bT = b / (bristleCount - 1);
+                let bOffset = (bT - 0.5) * BRUSH_THICKNESS;
 
-                inkBlob(gfx, bx, by, bSize, color, alpha);
+                // Add subtle streakiness with noise
+                let bNoise = noise(cx * 0.05, cy * 0.05, b * 0.5);
+                let bx = cx + pX * bOffset + (bNoise - 0.5) * 12;
+                let by = cy + pY * bOffset + (bNoise - 0.5) * 12;
+
+                // Tapering at the ends of the stroke
+                let fadeOut = sin(t * PI);
+                let bSize = 8 * load * fadeOut * (0.6 + flowNoise * 0.8);
+                let alpha = map(flowNoise * bNoise, 0, 1, 15, 95) * load;
+
+                gfx.fill(color[0], color[1], color[2], alpha);
+                gfx.ellipse(bx, by, bSize, bSize * random(0.85, 1.15));
+            }
+
+            // Occasional "heavy paint" blobs in the center of the brush
+            if (flowNoise > 0.8 && random() > 0.7) {
+                gfx.fill(color[0], color[1], color[2], 120 * load);
+                let spotSize = random(10, 20) * load;
+                gfx.ellipse(cx + random(-5, 5), cy + random(-5, 5), spotSize, spotSize);
             }
         }
 
-        // Edge darkening - thicker paint at edges
-        let edgeColor = [color[0] * 0.6, color[1] * 0.6, color[2] * 0.6];
-        for (let i = 0; i <= steps; i += 2) {
-            let t = i / steps;
-            let px = lerp(ox, nx, t);
-            let py = lerp(oy, ny, t);
-
-            // Left edge
-            inkBlob(gfx, px + perpX * currentSize * 0.5, py + perpY * currentSize * 0.5,
-                currentSize * 0.2, edgeColor, 180);
-            // Right edge
-            inkBlob(gfx, px - perpX * currentSize * 0.5, py - perpY * currentSize * 0.5,
-                currentSize * 0.2, edgeColor, 180);
+        // Add trailing drips at low speed (simulated by small segment length)
+        if (d < 15 && random() > 0.8) {
+            drawOrganicDrip(gfx, x2, y2, color, load);
         }
 
-        gfx.pop();
+        ctx.restore();
+    }
+
+    function drawOrganicDrip(gfx, x, y, color, load) {
+        const len = random(20, 60) * load;
+        const dripSize = random(4, 10);
+        gfx.noStroke();
+        for (let i = 0; i < 15; i++) {
+            let t = i / 14;
+            let dX = x + (noise(y * 0.01, i) - 0.5) * 10;
+            let dY = y + t * len;
+            let alpha = map(t, 0, 1, 100, 0) * load;
+            let sz = dripSize * (1 - t * 0.5);
+            gfx.fill(color[0], color[1], color[2], alpha);
+            gfx.ellipse(dX, dY, sz, sz * 1.3);
+        }
     }
 
     return {
         init,
         compose,
         dispose,
-        execute: function (letter, tx, ty, chosenColor) {
-            if (!_buffer) init();
-            if (!_buffer) return;
-
-            let col = PALETTE[_colorIdx % PALETTE.length].slice();
-
-            if (!letter || (typeof letter === 'string' && letter.trim() === '')) {
-                _prev = { x: null, y: null };
-                _vel = { x: 0, y: 0 };
-                _paintLoad = 1.0;
-                _colorIdx++; // Next color for next word
-                return;
-            }
-
-            if (_prev.x === null) {
-                _pos = { x: tx, y: ty };
-                _prev = { x: tx, y: ty };
-
-                // Initial splash
-                _buffer.push();
-                for (let j = 0; j < 15; j++) {
-                    inkBlob(_buffer, tx + random(-50, 50), ty + random(-50, 50),
-                        BRUSH_SIZE * random(0.5, 1.2), col, 255);
-                }
-                splatter(_buffer, tx, ty, col, 1.5);
-                _buffer.pop();
-            } else {
-                let maxIter = 80;
-                let iter = 0;
-                let friction = 0.75;
-                let spring = 0.1;
-
-                while (dist(_pos.x, _pos.y, tx, ty) > 5 && iter < maxIter) {
-                    let lx = _pos.x, ly = _pos.y;
-
-                    let ax = (tx - _pos.x) * spring;
-                    let ay = (ty - _pos.y) * spring;
-                    _vel.x = (_vel.x + ax) * friction;
-                    _vel.y = (_vel.y + ay) * friction;
-                    _pos.x += _vel.x;
-                    _pos.y += _vel.y;
-
-                    _paintLoad = constrain(_paintLoad - 0.002, 0.1, 1.2);
-
-                    renderWetStroke(_buffer, lx, ly, _pos.x, _pos.y, col, _paintLoad);
-                    iter++;
-
-                    let speed = sqrt(_vel.x * _vel.x + _vel.y * _vel.y);
-
-                    // Splatter at high speed
-                    if (speed > 8 && random() > 0.7) {
-                        splatter(_buffer, _pos.x, _pos.y, col, speed / 20);
-                    }
-
-                    // Drip at slow zones
-                    if (speed < 1 && random() > 0.9) {
-                        drip(_buffer, _pos.x, _pos.y, col);
-                    }
-                }
-
-                // End splatter
-                if (random() > 0.5) {
-                    splatter(_buffer, _pos.x, _pos.y, col, 0.8);
-                }
-            }
-
-            _prev.x = tx;
-            _prev.y = ty;
-        }
+        execute
     };
 })();

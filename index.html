@@ -249,6 +249,155 @@
       filter: invert(1) brightness(100%);
     }
 
+    /* Palette Indicator */
+    #palette-indicator {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 1.5px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      background: conic-gradient(#3EB489 0% 50%, #ACE5EE 50% 75%, #CCCCFF 75% 100%);
+    }
+
+    #palette-indicator:hover {
+      transform: scale(1.1);
+    }
+
+    #palette-dropdown {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      padding: 12px;
+      display: none;
+      z-index: 1000;
+      width: 300px;
+      max-height: 400px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      flex-direction: column;
+    }
+
+    #palette-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scrollbar-width: none;
+      flex-shrink: 0;
+    }
+
+    #palette-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .palette-tab {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      background: #f0f0f0;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #777;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .palette-tab.active {
+      background: #333;
+      color: white;
+    }
+
+    #palette-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    #palette-grid::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #palette-grid::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 2px;
+    }
+
+    .palette-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: background 0.1s ease;
+    }
+
+    .palette-option:hover {
+      background: #f5f5f5;
+    }
+
+    .palette-option.active {
+      background: #eee;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+
+    .palette-preview {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .palette-name-mini {
+      font-size: 9px;
+      text-align: center;
+      color: #666;
+      line-height: 1.1;
+      height: 20px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    body.dark-mode #palette-dropdown {
+      background: #222;
+      border-color: #333;
+    }
+
+    body.dark-mode .palette-tab {
+      background: #333;
+      color: #999;
+    }
+
+    body.dark-mode .palette-tab.active {
+      background: #eee;
+      color: #111;
+    }
+
+    body.dark-mode .palette-option:hover {
+      background: #2a2a2a;
+    }
+
+    body.dark-mode .palette-option.active {
+      background: #333;
+    }
+
+    body.dark-mode .palette-name-mini {
+      color: #aaa;
+    }
+
     #logo,
     #input-container,
     body,
@@ -265,6 +414,29 @@
   <div id="canvas-container"></div>
   <div id="ui">
     <img id="logo" src="assets/logo.svg" alt="Logo">
+
+    <div id="left-ui"
+      style="position:absolute; top:12px; left:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
+      <!-- Palette Selection -->
+      <div id="palette-wrap" style="position:relative; display:flex; align-items:center;">
+        <div id="palette-indicator" title="Current Palette"></div>
+        <div id="palette-dropdown">
+          <div id="palette-tabs">
+            <div class="palette-tab active" data-category="all">All</div>
+            <div class="palette-tab" data-category="nature">Nature</div>
+            <div class="palette-tab" data-category="floral">Floral</div>
+            <div class="palette-tab" data-category="atmosphere">Atmosphere</div>
+            <div class="palette-tab" data-category="vivid">Vivid</div>
+            <div class="palette-tab" data-category="earth">Earth</div>
+            <div class="palette-tab" data-category="cool">Cool</div>
+          </div>
+          <div id="palette-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Export + overlay toggle (top-right) -->
     <div id="export-wrap"
       style="position:absolute; top:12px; right:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
@@ -295,6 +467,7 @@
         <option value="liquid-ink">Liquid Ink</option>
         <option value="trowel">Trowel</option>
       </select>
+
       <!-- Export icon (Material Symbol) -->
       <button id="export-btn" title="Export PNG" aria-label="Export PNG"><span class="material-symbols-outlined"
           aria-hidden="true">save</span></button>
@@ -456,6 +629,123 @@
     document.getElementById('styleSelector').addEventListener('change', (e) => {
       loadEngine(e.target.value);
     });
+  </script>
+  <script>
+    // Palette Logic
+    (function () {
+      const indicator = document.getElementById('palette-indicator');
+      const dropdown = document.getElementById('palette-dropdown');
+      const grid = document.getElementById('palette-grid');
+      const tabs = document.querySelectorAll('.palette-tab');
+      let currentCategory = 'all';
+
+      function populateDropdown() {
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        // Add Random option in 'all' category
+        if (currentCategory === 'all') {
+          const div = document.createElement('div');
+          div.className = 'palette-option' + (window.SELECTED_PALETTE_ID === null ? ' active' : '');
+          div.dataset.id = 'null';
+
+          const preview = document.createElement('div');
+          preview.className = 'palette-preview';
+          preview.style.background = `linear-gradient(45deg, #ddd, #444)`;
+
+          const name = document.createElement('div');
+          name.className = 'palette-name-mini';
+          name.textContent = 'Random';
+
+          div.appendChild(preview);
+          div.appendChild(name);
+          grid.appendChild(div);
+        }
+
+        if (window.PALETTES) {
+          const filtered = currentCategory === 'all'
+            ? window.PALETTES
+            : window.PALETTES.filter(p => p.category === currentCategory);
+
+          filtered.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'palette-option' + (window.SELECTED_PALETTE_ID === p.id ? ' active' : '');
+            div.dataset.id = p.id;
+
+            const preview = document.createElement('div');
+            preview.className = 'palette-preview';
+            const colors = p.colors || ['#ccc'];
+            const c1 = colors[0];
+            const c2 = colors[Math.min(1, colors.length - 1)];
+            const c3 = colors[Math.min(2, colors.length - 1)];
+            preview.style.background = `conic-gradient(${c1} 0% 50%, ${c2} 50% 75%, ${c3} 75% 100%)`;
+
+            const name = document.createElement('div');
+            name.className = 'palette-name-mini';
+            name.textContent = p.name;
+
+            div.appendChild(preview);
+            div.appendChild(name);
+            grid.appendChild(div);
+          });
+        }
+      }
+
+      function updateIndicator() {
+        if (!indicator) return;
+        let meta = null;
+        if (window.SELECTED_PALETTE_ID) {
+          meta = (window.PALETTES || []).find(p => p.id === window.SELECTED_PALETTE_ID);
+        }
+        if (!meta) meta = window.CURRENT_ACTIVE_PALETTE_METADATA;
+
+        if (meta && meta.colors) {
+          const c1 = meta.colors[0] || '#ccc';
+          const c2 = meta.colors[1] || c1;
+          const c3 = meta.colors[2] || c2;
+          indicator.style.background = `conic-gradient(${c1} 0% 50%, ${c2} 50% 75%, ${c3} 75% 100%)`;
+        } else {
+          indicator.style.background = `conic-gradient(#ccc 0% 50%, #999 50% 75%, #666 75% 100%)`;
+        }
+      }
+
+      indicator.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpening = dropdown.style.display !== 'flex';
+        dropdown.style.display = isOpening ? 'flex' : 'none';
+        if (isOpening) populateDropdown();
+      });
+
+      document.addEventListener('click', () => { dropdown.style.display = 'none'; });
+
+      dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tab = e.target.closest('.palette-tab');
+        if (tab) {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentCategory = tab.dataset.category;
+          populateDropdown();
+          return;
+        }
+
+        const option = e.target.closest('.palette-option');
+        if (option) {
+          const id = option.dataset.id === 'null' ? null : option.dataset.id;
+          window.SELECTED_PALETTE_ID = id;
+          grid.querySelectorAll('.palette-option').forEach(opt => opt.classList.remove('active'));
+          option.classList.add('active');
+          window.CURRENT_ACTIVE_PALETTE_METADATA = null;
+          updateIndicator();
+          dropdown.style.display = 'none';
+        }
+      });
+
+      populateDropdown();
+      setInterval(updateIndicator, 1000);
+      updateIndicator();
+      window.refreshPaletteUI = () => { populateDropdown(); updateIndicator(); };
+    })();
   </script>
 </body>
 
