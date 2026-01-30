@@ -465,7 +465,7 @@
         <option value="aether-soft">Aether Soft</option>
         <option value="aether-soft-modern">Aether Soft Modern</option>
         <option value="liquid-ink">Liquid Ink</option>
-        <option value="trowel">Trowel</option>
+        <option value="oil-brush">Oil Brush</option>
       </select>
 
       <!-- Export icon (Material Symbol) -->
@@ -603,8 +603,9 @@
       return new Promise((resolve) => {
         const script = document.createElement('script');
         // Prefer named engine file (engine.<style>.js) to avoid ambiguous engine.js files
-        const named = `engines/${style}/engine.${style}.js`;
-        const legacy = `engines/${style}/engine.js`;
+        // Added cache-buster to ensure the latest engine code is loaded
+        const named = `engines/${style}/engine.${style}.js?v=` + Date.now();
+        const legacy = `engines/${style}/engine.js?v=` + Date.now();
         script.src = named;
         script.onload = () => {
           loadedEngines.add(style);

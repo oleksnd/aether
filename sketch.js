@@ -107,7 +107,7 @@ function setup() {
     if (window.AetherSoftEngine && typeof window.AetherSoftEngine.init === 'function') window.AetherSoftEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.LiquidInkEngine && typeof window.LiquidInkEngine.init === 'function') window.LiquidInkEngine.init({ width: artLayer.width, height: artLayer.height });
-    if (window.TrowelEngine && typeof window.TrowelEngine.init === 'function') window.TrowelEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.OilBrushEngine && typeof window.OilBrushEngine.init === 'function') window.OilBrushEngine.init({ width: artLayer.width, height: artLayer.height });
   } catch (e) { /* ignore */ }
 
   // Wire up style selector: keep a small runtime state and listen for changes
@@ -257,11 +257,22 @@ function startGeneration(text) {
   // Parse the input into words
   let wordArrays = parseInput(text);
 
-  // Clear previous paths and highlights
+  // Clear current paths and highlights
   currentPaths = [];
   highlightedCells.clear();
-  // Clear the art layer so each generation starts fresh
+
+  // Clear the art layer
   try { if (artLayer && typeof artLayer.clear === 'function') artLayer.clear(); } catch (e) { /* ignore */ }
+
+  // RESET ALL ENGINES: Force clear their internal buffers for the new generation
+  const engines = ['AetherSoftEngine', 'AetherSoftModernEngine', 'LiquidInkEngine', 'OilBrushEngine'];
+  engines.forEach(name => {
+    try {
+      if (window[name] && typeof window[name].init === 'function') {
+        window[name].init({ width: artLayer.width, height: artLayer.height, forceClear: true });
+      }
+    } catch (e) { }
+  });
   // Defensive: ensure artLayer composite mode is normal when starting a generation
   try { if (artLayer && artLayer.drawingContext) artLayer.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) { /* ignore */ }
 
@@ -666,7 +677,7 @@ function windowResized() {
     if (window.AetherSoftEngine && typeof window.AetherSoftEngine.init === 'function') window.AetherSoftEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.LiquidInkEngine && typeof window.LiquidInkEngine.init === 'function') window.LiquidInkEngine.init({ width: artLayer.width, height: artLayer.height });
-    if (window.TrowelEngine && typeof window.TrowelEngine.init === 'function') window.TrowelEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.OilBrushEngine && typeof window.OilBrushEngine.init === 'function') window.OilBrushEngine.init({ width: artLayer.width, height: artLayer.height });
   } catch (e) { /* ignore */ }
 
   // Recalculate cell dims
