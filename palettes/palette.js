@@ -408,6 +408,131 @@ window.PALETTES = [
     name: 'Dusk Lavender',
     category: 'cool',
     colors: ['#5D6079', '#A9B1C5', '#E5DDCB', '#F2EEE9']
+  },
+  // --- Added: Natural Pastels (Природная пастель)
+  {
+    id: 'lupine-field',
+    name: 'Lupine Field (Поле люпинов)',
+    category: 'floral',
+    colors: ['#4B3D8E', '#AC94B2', '#D9A596', '#B4C45A', '#5D7A32']
+  },
+  {
+    id: 'spring-astrantia',
+    name: 'Spring Astrantia (Весенняя астранция)',
+    category: 'floral',
+    colors: ['#7EA041', '#C5D6A4', '#E2C9BD', '#E5B7B1', '#C76E83']
+  },
+  {
+    id: 'blooming-peony',
+    name: 'Blooming Peony (Цветущий пион)',
+    category: 'floral',
+    colors: ['#F0806E', '#F7B992', '#E5E0C3', '#B9C7B6', '#7D989A']
+  },
+  {
+    id: 'white-ranunculus',
+    name: 'White Ranunculus (Белый ранункулюс)',
+    category: 'floral',
+    colors: ['#8B8C46', '#C9C9C9', '#EEF2E6', '#EBD6CE', '#E7B99D']
+  },
+  // --- Added: Warm Earth & Sunset (Теплая земля и закат)
+  {
+    id: 'cloudy-sunset',
+    name: 'Cloudy Sunset (Облачный закат)',
+    category: 'atmosphere',
+    colors: ['#7F6B6F', '#BC8573', '#FFD8C2', '#F4E9E2', '#D5DEE8']
+  },
+  {
+    id: 'orange-poppies',
+    name: 'Orange Poppies (Оранжевые маки)',
+    category: 'floral',
+    colors: ['#B92E51', '#EB5E3C', '#FF9E7D', '#FFD06D', '#6D9D74']
+  },
+  {
+    id: 'sunflower-sunset',
+    name: 'Sunflower at Sunset (Подсолнух на закате)',
+    category: 'nature',
+    colors: ['#3D3D29', '#7D8035', '#E9A62B', '#D15B00', '#5C2007']
+  },
+  {
+    id: 'sunset-clouds',
+    name: 'Sunset Clouds (Закатные облака)',
+    category: 'atmosphere',
+    colors: ['#3F363A', '#9D82A5', '#C38898', '#F7B59F', '#FCE2B3']
+  },
+  // --- Added: Architectural & Classic (Архитектура и классика)
+  {
+    id: 'gothic-cathedral',
+    name: 'Gothic Cathedral (Готический собор)',
+    category: 'classic',
+    colors: ['#E1E1E1', '#C9C1B0', '#9E8E7E', '#7F6751', '#B57E43']
+  },
+  {
+    id: 'ancient-mosaic',
+    name: 'Ancient Mosaic (Древняя мозаика)',
+    category: 'classic',
+    colors: ['#1F2E1B', '#6B703F', '#F2EFE1', '#E6BD64', '#83532A']
+  },
+  {
+    id: 'mediterranean-town',
+    name: 'Mediterranean Town (Средиземноморский город)',
+    category: 'classic',
+    colors: ['#4D231F', '#9E4D06', '#E3DCD1', '#C7BCAD', '#5E595E']
+  },
+  {
+    id: 'golden-gladiolus',
+    name: 'Golden Gladiolus (Золотистый гладиолус)',
+    category: 'floral',
+    colors: ['#5D3A1A', '#965A1A', '#D19E4B', '#E9C46A', '#F4E9CD']
+  },
+  // --- Added: High Contrast & Vibrant (Контраст и яркость)
+  {
+    id: 'scarlet-poppies',
+    name: 'Scarlet Poppies (Алые маки)',
+    category: 'vivid',
+    colors: ['#E1E1E1', '#DCE28C', '#849E45', '#FF6B53', '#FF0000']
+  },
+  {
+    id: 'citrus-mix',
+    name: 'Citrus Mix (Цитрусовый микс)',
+    category: 'vivid',
+    colors: ['#FFF8D5', '#FFB400', '#FF8C3E', '#FF2424', '#990000']
+  },
+  {
+    id: 'green-foliage',
+    name: 'Green Foliage (Зеленая хвоя)',
+    category: 'nature',
+    colors: ['#FF9E7D', '#FFC2AC', '#7EA041', '#3F512F', '#0B1B2B']
+  },
+  {
+    id: 'tropical-hummingbird',
+    name: 'Tropical Hummingbird (Тропический колибри)',
+    category: 'vivid',
+    colors: ['#5D7A01', '#8DC63F', '#F7B23B', '#F6D8A9', '#4D3A2F']
+  },
+  // --- Added: Modern & Deep Nature (Модерн и глубокая природа)
+  {
+    id: 'ocean-shore',
+    name: 'Ocean Shore (Берег океана)',
+    category: 'nature',
+    colors: ['#5D7A32', '#B4C45A', '#E9C8BC', '#AC94B2', '#3B6082']
+  },
+  {
+    id: 'mountain-canyon',
+    name: 'Mountain Canyon (Горный каньон)',
+    category: 'earth',
+    colors: ['#000000', '#4D231F', '#C37384', '#F79E7D', '#EB5E3C']
+  },
+  {
+    id: 'garden-plant',
+    name: 'Garden Plant (Садовое растение)',
+    category: 'nature',
+    colors: ['#E9A68A', '#F2EFE1', '#2D7363', '#5D7A32', '#12221F']
+  },
+  {
+    id: 'yellow-sports-car',
+    name: 'Yellow Sports Car (Желтый спорткар)',
+    category: 'vivid',
+    colors: ['#2D2525', '#B85C2E', '#DB8E50', '#DECD3C', '#EAE1D3']
   }
 ];
 
