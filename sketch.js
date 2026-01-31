@@ -121,10 +121,51 @@ function setup() {
       // default to aether-soft
       styleSel.value = styleSel.value || 'aether-soft';
       window.currentFluidStyle = styleSel.value;
+
+      // torn wet brush slider elements
+      const tornWrap = document.getElementById('torn-thickness-wrap');
+      const tornSlider = document.getElementById('torn-thickness');
+      const tornVal = document.getElementById('torn-thickness-value');
+
+      // set default global factor
+      window.TORN_WET_BRUSH_THICKNESS = 1;
+      if (tornSlider) {
+        // reflect initial value
+        try { tornVal.textContent = parseFloat(tornSlider.value).toFixed(2); } catch (e) { }
+        tornSlider.addEventListener('input', (ev) => {
+          let v = parseFloat(ev.target.value);
+          window.TORN_WET_BRUSH_THICKNESS = isNaN(v) ? 1 : v;
+          if (tornVal) tornVal.textContent = window.TORN_WET_BRUSH_THICKNESS.toFixed(2);
+        });
+      }
+
+      function updateTornSliderVisibility() {
+        try {
+          if (!tornWrap) { console.log('[UI] torn slider: element missing'); return; }
+          console.log('[UI] torn slider visibility check ->', window.currentFluidStyle);
+          if (window.currentFluidStyle === 'torn-wet-brush') {
+            tornWrap.style.display = 'inline-flex';
+            tornWrap.style.opacity = '1';
+            tornWrap.style.pointerEvents = 'auto';
+          } else {
+            tornWrap.style.display = 'none';
+            tornWrap.style.pointerEvents = 'none';
+          }
+        } catch (e) { console.warn('[UI] updateTornSliderVisibility error', e); }
+      }
+
+      // ensure visibility matches current style and update on change
+      updateTornSliderVisibility();
+
       styleSel.addEventListener('change', (e) => {
         window.currentFluidStyle = e.target.value;
         try { console.log('[UI] fluid style changed ->', window.currentFluidStyle); } catch (e) { }
+        updateTornSliderVisibility();
       });
+
+      // additional hooks to ensure visibility toggles in edge cases
+      styleSel.addEventListener('input', () => updateTornSliderVisibility());
+      styleSel.addEventListener('click', () => updateTornSliderVisibility());
     }
   } catch (e) { /* ignore in non-browser contexts */ }
 

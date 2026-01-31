@@ -138,11 +138,13 @@ window.TornWetBrushEngine = (function () {
             }
 
             // Tuning derived from stroke speed/length
+            // global thickness factor controlled by UI slider (window.TORN_WET_BRUSH_THICKNESS)
+            let thicknessFactor = (typeof window.TORN_WET_BRUSH_THICKNESS === 'number') ? window.TORN_WET_BRUSH_THICKNESS : 1;
             if (_prev && _prev.x !== null) {
                 let dx = x - _prev.x;
                 let dy = y - _prev.y;
                 let d = sqrt(dx * dx + dy * dy) || 1;
-                let baseW = map(d, 0, 120, 40, 160, true) * random(0.9, 1.1);
+                let baseW = map(d, 0, 120, 40, 160, true) * thicknessFactor * random(0.9, 1.1);
 
                 // Primary smeared ragged stroke
                 drawSmearSegment(_buffer, _prev.x, _prev.y, x, y, col, baseW);
@@ -163,9 +165,10 @@ window.TornWetBrushEngine = (function () {
                 }
             } else {
                 // initial wet blot
-                drawRaggedEdge(_buffer, x, y, random(80, 160), col);
+                // scale blot radii by thickness factor
+                drawRaggedEdge(_buffer, x, y, random(80, 160) * thicknessFactor, col);
                 for (let i = 0; i < 4; i++) {
-                    drawRaggedEdge(_buffer, x + random(-40, 40), y + random(-30, 30), random(20, 70), col);
+                    drawRaggedEdge(_buffer, x + random(-40, 40), y + random(-30, 30), random(20, 70) * thicknessFactor, col);
                 }
             }
 
