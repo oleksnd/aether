@@ -108,7 +108,10 @@ function setup() {
     if (window.AetherSoftModernEngine && typeof window.AetherSoftModernEngine.init === 'function') window.AetherSoftModernEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.LiquidInkEngine && typeof window.LiquidInkEngine.init === 'function') window.LiquidInkEngine.init({ width: artLayer.width, height: artLayer.height });
     if (window.OilBrushEngine && typeof window.OilBrushEngine.init === 'function') window.OilBrushEngine.init({ width: artLayer.width, height: artLayer.height });
-    if (window.WetWatercolorEngine && typeof window.WetWatercolorEngine.init === 'function') window.WetWatercolorEngine.init({ width: artLayer.width, height: artLayer.height });
+    // WetWatercolorEngine removed (replaced by TornWetBrushEngine)
+    if (window.SplatterEngine && typeof window.SplatterEngine.init === 'function') window.SplatterEngine.init({ width: artLayer.width, height: artLayer.height });
+      if (window.FractalTreeEngine && typeof window.FractalTreeEngine.init === 'function') window.FractalTreeEngine.init({ width: artLayer.width, height: artLayer.height });
+      if (window.TornWetBrushEngine && typeof window.TornWetBrushEngine.init === 'function') window.TornWetBrushEngine.init({ width: artLayer.width, height: artLayer.height });
   } catch (e) { /* ignore */ }
 
   // Wire up style selector: keep a small runtime state and listen for changes
@@ -266,7 +269,7 @@ function startGeneration(text) {
   try { if (artLayer && typeof artLayer.clear === 'function') artLayer.clear(); } catch (e) { /* ignore */ }
 
   // RESET ALL ENGINES: Force clear their internal buffers for the new generation
-  const engines = ['AetherSoftEngine', 'AetherSoftModernEngine', 'LiquidInkEngine', 'OilBrushEngine', 'WetWatercolorEngine'];
+  const engines = ['AetherSoftEngine', 'AetherSoftModernEngine', 'LiquidInkEngine', 'OilBrushEngine', 'SplatterEngine', 'FractalTreeEngine', 'TornWetBrushEngine'];
   engines.forEach(name => {
     try {
       if (window[name] && typeof window[name].init === 'function') {
