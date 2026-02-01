@@ -237,6 +237,9 @@ window.LiquidInkEngine = (function () {
 
     // MASSIVE thickness for true flooding/spilling effect
     let baseThickness = map(constrain(distVal, 10, 400), 10, 400, 120, 50);
+    // Apply global thickness multiplier
+    let thicknessFactor = (typeof window.LIQUID_INK_THICKNESS === 'number') ? window.LIQUID_INK_THICKNESS : ((typeof window.BRUSH_THICKNESS === 'number') ? window.BRUSH_THICKNESS : 1);
+    baseThickness *= thicknessFactor;
 
     // Normal vector
     let nx = -dy / distVal;

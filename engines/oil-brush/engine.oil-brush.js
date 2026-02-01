@@ -37,7 +37,8 @@ window.OilBrushEngine = (function () {
         const hasBrushLib = (typeof brush !== 'undefined');
 
         gfx.push();
-        const baseWeight = random(250, 500); // Reduced width by half
+        const thicknessFactor = (typeof window.OIL_BRUSH_THICKNESS === 'number') ? window.OIL_BRUSH_THICKNESS : ((typeof window.BRUSH_THICKNESS === 'number') ? window.BRUSH_THICKNESS : 1);
+        const baseWeight = random(250, 500) * thicknessFactor; // Reduced width by half, scaled by thickness factor
 
         if (hasBrushLib) {
             try {

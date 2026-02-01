@@ -138,8 +138,8 @@ window.TornWetBrushEngine = (function () {
             }
 
             // Tuning derived from stroke speed/length
-            // global thickness factor controlled by UI slider (window.TORN_WET_BRUSH_THICKNESS)
-            let thicknessFactor = (typeof window.TORN_WET_BRUSH_THICKNESS === 'number') ? window.TORN_WET_BRUSH_THICKNESS : 1;
+            // per-engine override falls back to global: window.BRUSH_THICKNESS
+            let thicknessFactor = (typeof window.TORN_WET_BRUSH_THICKNESS === 'number') ? window.TORN_WET_BRUSH_THICKNESS : ((typeof window.BRUSH_THICKNESS === 'number') ? window.BRUSH_THICKNESS : 1);
             if (_prev && _prev.x !== null) {
                 let dx = x - _prev.x;
                 let dy = y - _prev.y;
@@ -165,7 +165,7 @@ window.TornWetBrushEngine = (function () {
                 }
             } else {
                 // initial wet blot
-                // scale blot radii by thickness factor
+                // scale blot radii by thickness factor (already using thicknessFactor)
                 drawRaggedEdge(_buffer, x, y, random(80, 160) * thicknessFactor, col);
                 for (let i = 0; i < 4; i++) {
                     drawRaggedEdge(_buffer, x + random(-40, 40), y + random(-30, 30), random(20, 70) * thicknessFactor, col);

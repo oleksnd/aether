@@ -195,9 +195,11 @@ window.FractalGeomEngine = (function() {
 
       // create a node representing a geometric burst at position
       const baseCol = Array.isArray(chosenColor) ? chosenColor.slice() : [30,30,30];
+      // apply thickness multiplier to node size
+      let thicknessFactor = (typeof window.FRACTAL_TREE_THICKNESS === 'number') ? window.FRACTAL_TREE_THICKNESS : ((typeof window.BRUSH_THICKNESS === 'number') ? window.BRUSH_THICKNESS : 1);
       const node = {
         x, y,
-        size: constrain(map(speed, 0, 0.8, 18, 220) * random(0.7, 1.2), 6, 380),
+        size: constrain(map(speed, 0, 0.8, 18, 220) * random(0.7, 1.2) * thicknessFactor, 6, 380),
         rot: random(TWO_PI),
         depth: Math.floor(map(constrain(map(speed, 0, 1, 0, 1), 0, 1), 0, 1, 1, MAX_DEPTH)),
         color: baseCol,

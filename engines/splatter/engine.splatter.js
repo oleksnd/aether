@@ -38,6 +38,8 @@ window.SplatterEngine = (function() {
   // Function to create a splatter at position
   function createSplatter(gfx, cx, cy, baseColor, splatCount, spreadRadius) {
     gfx.noStroke();
+    // thickness factor for splat sizes
+    let thicknessFactor = (typeof window.SPLATTER_BRUSH_THICKNESS === 'number') ? window.SPLATTER_BRUSH_THICKNESS : ((typeof window.BRUSH_THICKNESS === 'number') ? window.BRUSH_THICKNESS : 1);
     for (let i = 0; i < splatCount; i++) {
       // Random position within spread
       let angle = random(0, TWO_PI);
@@ -46,7 +48,7 @@ window.SplatterEngine = (function() {
       let sy = cy + sin(angle) * radius;
 
       // Random size
-      let size = random(MIN_SPLAT_SIZE, MAX_SPLAT_SIZE);
+      let size = random(MIN_SPLAT_SIZE, MAX_SPLAT_SIZE) * thicknessFactor;
 
       // Vary color slightly
       let col = baseColor.slice();

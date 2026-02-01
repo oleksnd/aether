@@ -122,50 +122,80 @@ function setup() {
       styleSel.value = styleSel.value || 'aether-soft';
       window.currentFluidStyle = styleSel.value;
 
-      // torn wet brush slider elements
-      const tornWrap = document.getElementById('torn-thickness-wrap');
-      const tornSlider = document.getElementById('torn-thickness');
-      const tornVal = document.getElementById('torn-thickness-value');
+      // brush thickness slider elements (global)
+      const brushWrap = document.getElementById('brush-thickness-wrap');
+      const brushSlider = document.getElementById('brush-thickness');
+      const brushVal = document.getElementById('brush-thickness-value');
 
       // set default global factor
-      window.TORN_WET_BRUSH_THICKNESS = 1;
-      if (tornSlider) {
-        // reflect initial value
-        try { tornVal.textContent = parseFloat(tornSlider.value).toFixed(2); } catch (e) { }
-        tornSlider.addEventListener('input', (ev) => {
-          let v = parseFloat(ev.target.value);
-          window.TORN_WET_BRUSH_THICKNESS = isNaN(v) ? 1 : v;
-          if (tornVal) tornVal.textContent = window.TORN_WET_BRUSH_THICKNESS.toFixed(2);
-        });
+      window.BRUSH_THICKNESS = 1;
+
+      function updateBrushSliderBackground() {
+        try {
+          if (!brushSlider) return;
+          let min = parseFloat(brushSlider.min) || 0.1;
+          let max = parseFloat(brushSlider.max) || 1.5;
+          let v = parseFloat(brushSlider.value) || 1;
+          let pct = Math.max(0, Math.min(100, Math.round(((v - min) / (max - min)) * 100)));
+          // colors change in dark mode
+          let left = '#111';
+          let right = '#efefef';
+          if (document.body && document.body.classList && document.body.classList.contains('dark-mode')) {
+            left = '#eee'; right = '#333';
+          }
+          brushSlider.style.background = `linear-gradient(to right, ${left} ${pct}%, ${right} ${pct}%)`;
+        } catch (e) { console.warn('[UI] updateBrushSliderBackground error', e); }
       }
 
-      function updateTornSliderVisibility() {
+      if (brushSlider) {
+        // reflect initial value
+        try { brushVal.textContent = parseFloat(brushSlider.value).toFixed(2); } catch (e) { }
+        // initial painting of background
+        updateBrushSliderBackground();
+        brushSlider.addEventListener('input', (ev) => {
+          let v = parseFloat(ev.target.value);
+          window.BRUSH_THICKNESS = isNaN(v) ? 1 : v;
+          if (brushVal) brushVal.textContent = window.BRUSH_THICKNESS.toFixed(2);
+          updateBrushSliderBackground();
+        });
+
+        // update background when user toggles dark mode (keep in sync)
+        const darkToggle = document.getElementById('dark-toggle');
+        if (darkToggle) darkToggle.addEventListener('click', updateBrushSliderBackground);
+      }
+
+      function updateBrushSliderVisibility() {
         try {
-          if (!tornWrap) { console.log('[UI] torn slider: element missing'); return; }
-          console.log('[UI] torn slider visibility check ->', window.currentFluidStyle);
-          if (window.currentFluidStyle === 'torn-wet-brush') {
-            tornWrap.style.display = 'inline-flex';
-            tornWrap.style.opacity = '1';
-            tornWrap.style.pointerEvents = 'auto';
+          if (!brushWrap) { console.log('[UI] brush slider: element missing'); return; }
+          console.log('[UI] brush slider visibility check ->', window.currentFluidStyle);
+          // hide for engines that shouldn't be adjusted by thickness control
+          if (window.currentFluidStyle && (window.currentFluidStyle === 'aether-soft' || window.currentFluidStyle === 'aether-soft-modern')) {
+            brushWrap.style.display = 'none';
+            brushWrap.style.pointerEvents = 'none';
           } else {
-            tornWrap.style.display = 'none';
-            tornWrap.style.pointerEvents = 'none';
+            brushWrap.style.display = 'inline-flex';
+            brushWrap.style.opacity = '1';
+            brushWrap.style.pointerEvents = 'auto';
           }
-        } catch (e) { console.warn('[UI] updateTornSliderVisibility error', e); }
+        } catch (e) { console.warn('[UI] updateBrushSliderVisibility error', e); }
       }
 
       // ensure visibility matches current style and update on change
-      updateTornSliderVisibility();
+      updateBrushSliderVisibility();
 
       styleSel.addEventListener('change', (e) => {
         window.currentFluidStyle = e.target.value;
         try { console.log('[UI] fluid style changed ->', window.currentFluidStyle); } catch (e) { }
-        updateTornSliderVisibility();
+        updateBrushSliderVisibility();
       });
 
       // additional hooks to ensure visibility toggles in edge cases
-      styleSel.addEventListener('input', () => updateTornSliderVisibility());
-      styleSel.addEventListener('click', () => updateTornSliderVisibility());
+      styleSel.addEventListener('input', () => updateBrushSliderVisibility());
+      styleSel.addEventListener('click', () => updateBrushSliderVisibility());
+
+      // additional hooks to ensure visibility toggles in edge cases
+      styleSel.addEventListener('input', () => updateBrushSliderVisibility());
+      styleSel.addEventListener('click', () => updateBrushSliderVisibility());
     }
   } catch (e) { /* ignore in non-browser contexts */ }
 
