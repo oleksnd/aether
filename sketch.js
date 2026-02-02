@@ -403,6 +403,8 @@ function startGeneration(text) {
 
   // Expose visibility toggles for UI: default all visible and render checkboxes
   const wordStrings = wordArrays.map(arr => arr.join(''));
+  // Expose wordStrings globally so export can name per-word files
+  window.wordStrings = wordStrings;
   window.wordVisibility = wordStrings.map(() => true);
   try { if (typeof window.renderWordToggles === 'function') { console.log('[Sketch] calling renderWordToggles'); window.renderWordToggles(wordStrings); } } catch (e) { console.warn('[Sketch] renderWordToggles failed', e); }
 
@@ -748,35 +750,329 @@ function highlightCells() {
 
 // `executeInking` implementation moved to `diffusion.js` (use `Fluid.executeInking`)
 
-// Export PNG containing only the art layer (no grid / letters / nozzle)
-function exportPNG(filename) {
-  if (!artLayer) {
-    console.warn('No artLayer available to export.');
+// Export PNG: create single ZIP (stored — no compression) containing per-word PNGs + final composition
+async function exportPNG(filename) {
+  // helpers
+  function ts() { return year() + nf(month(), 2) + nf(day(), 2) + '-' + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2); }
+  function sanitize(s) { if (!s) return 'layer'; return String(s).trim().replace(/\s+/g, '-').replace(/[^A-Za-z0-9-_\.]/g, '').replace(/-+/g, '-'); }
+
+  // canvas -> Blob helper
+  function canvasToBlob(gfx) {
+    return new Promise((resolve) => {
+      try {
+        if (gfx && gfx.canvas && gfx.canvas.toBlob) {
+          gfx.canvas.toBlob(b => resolve(b));
+        } else {
+          const data = gfx.canvas.toDataURL('image/png');
+          const parts = data.split(',');
+          const bstr = atob(parts[1]);
+          let n = bstr.length; const u8 = new Uint8Array(n); while (n--) u8[n] = bstr.charCodeAt(n);
+          resolve(new Blob([u8], { type: 'image/png' }));
+        }
+      } catch (e) {
+        try { const data = gfx.canvas.toDataURL('image/png'); const parts = data.split(','); const bstr = atob(parts[1]); let n = bstr.length; const u8 = new Uint8Array(n); while (n--) u8[n] = bstr.charCodeAt(n); resolve(new Blob([u8], { type: 'image/png' })); } catch (ex) { resolve(null); }
+      }
+    });
+  }
+
+  // CRC32 (standard table) — returns uint32
+  const CRC32_TABLE = (function () { let c; const table = new Uint32Array(256); for (let n = 0; n < 256; n++) { c = n; for (let k = 0; k < 8; k++) c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1)); table[n] = c >>> 0; } return table; })();
+  function crc32(buf) { let crc = 0 ^ (-1); for (let i = 0; i < buf.length; i++) crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ buf[i]) & 0xFF]; return (crc ^ (-1)) >>> 0; }
+
+  function strToUtf8Bytes(str) { const encoder = new TextEncoder(); return encoder.encode(str); }
+  function u32ToLE(n) { const arr = new Uint8Array(4); arr[0] = n & 0xFF; arr[1] = (n >>> 8) & 0xFF; arr[2] = (n >>> 16) & 0xFF; arr[3] = (n >>> 24) & 0xFF; return arr; }
+  function u16ToLE(n) { const arr = new Uint8Array(2); arr[0] = n & 0xFF; arr[1] = (n >>> 8) & 0xFF; return arr; }
+
+  // Build ZIP (stored) from entries: [{name, data:Uint8Array}]
+  function buildZip(entries) {
+    const parts = [];
+    const centralDirs = [];
+    let localOffset = 0;
+
+    for (const e of entries) {
+      const nameBytes = strToUtf8Bytes(e.name);
+      const crc = crc32(e.data);
+      const size = e.data.length;
+
+      // local file header
+      const localHeader = new Uint8Array(30 + nameBytes.length);
+      let p = 0;
+      // signature
+      localHeader.set([0x50,0x4B,0x03,0x04], p); p += 4;
+      // version needed (2 bytes)
+      localHeader.set(u16ToLE(20), p); p += 2;
+      // general purpose bit flag
+      localHeader.set(u16ToLE(0), p); p += 2;
+      // compression method (0 = stored)
+      localHeader.set(u16ToLE(0), p); p += 2;
+      // mod time/date
+      localHeader.set(u16ToLE(0), p); p += 2; localHeader.set(u16ToLE(0), p); p += 2;
+      // crc32
+      localHeader.set(u32ToLE(crc), p); p += 4;
+      // compressed size
+      localHeader.set(u32ToLE(size), p); p += 4;
+      // uncompressed size
+      localHeader.set(u32ToLE(size), p); p += 4;
+      // filename length
+      localHeader.set(u16ToLE(nameBytes.length), p); p += 2;
+      // extra length
+      localHeader.set(u16ToLE(0), p); p += 2;
+      // filename
+      localHeader.set(nameBytes, p); p += nameBytes.length;
+
+      parts.push(localHeader);
+      parts.push(e.data);
+
+      // central directory header (to be added later)
+      const cdHeader = new Uint8Array(46 + nameBytes.length);
+      p = 0;
+      cdHeader.set([0x50,0x4B,0x01,0x02], p); p += 4; // signature
+      cdHeader.set(u16ToLE(0x0314), p); p += 2; // version made by (arbitrary)
+      cdHeader.set(u16ToLE(20), p); p += 2; // version needed
+      cdHeader.set(u16ToLE(0), p); p += 2; // flags
+      cdHeader.set(u16ToLE(0), p); p += 2; // compression method
+      cdHeader.set(u16ToLE(0), p); p += 2; cdHeader.set(u16ToLE(0), p); p += 2; // mod time/date
+      cdHeader.set(u32ToLE(crc), p); p += 4;
+      cdHeader.set(u32ToLE(size), p); p += 4;
+      cdHeader.set(u32ToLE(size), p); p += 4;
+      cdHeader.set(u16ToLE(nameBytes.length), p); p += 2; // name len
+      cdHeader.set(u16ToLE(0), p); p += 2; // extra len
+      cdHeader.set(u16ToLE(0), p); p += 2; // comment len
+      cdHeader.set(u16ToLE(0), p); p += 2; // disk number start
+      cdHeader.set(u16ToLE(0), p); p += 2; // internal attrs
+      cdHeader.set(u32ToLE(0), p); p += 4; // external attrs
+      cdHeader.set(u32ToLE(localOffset), p); p += 4; // relative offset
+      cdHeader.set(nameBytes, p); p += nameBytes.length;
+
+      centralDirs.push(cdHeader);
+
+      // update local offset: header + data
+      localOffset += localHeader.length + e.data.length;
+    }
+
+    const centralStart = localOffset;
+    for (const cd of centralDirs) { parts.push(cd); localOffset += cd.length; }
+    const centralEnd = localOffset;
+    const centralSize = centralEnd - centralStart;
+
+    // end of central dir
+    const eocd = new Uint8Array(22);
+    let q = 0;
+    eocd.set([0x50,0x4B,0x05,0x06], q); q += 4; // signature
+    eocd.set(u16ToLE(0), q); q += 2; // disk number
+    eocd.set(u16ToLE(0), q); q += 2; // disk start
+    eocd.set(u16ToLE(centralDirs.length), q); q += 2; // entries this disk
+    eocd.set(u16ToLE(centralDirs.length), q); q += 2; // total entries
+    eocd.set(u32ToLE(centralSize), q); q += 4; // central dir size
+    eocd.set(u32ToLE(centralStart), q); q += 4; // central dir offset
+    eocd.set(u16ToLE(0), q); q += 2; // comment length
+
+    parts.push(eocd);
+
+    // concat all into one Uint8Array
+    let totalLen = 0; for (const ppart of parts) totalLen += ppart.length;
+    const out = new Uint8Array(totalLen);
+    let pos = 0; for (const ppart of parts) { out.set(ppart, pos); pos += ppart.length; }
+    return new Blob([out], { type: 'application/zip' });
+  }
+
+  // Draw helpers are re-used from earlier implementation
+  function drawGridTo(gfx) {
+    try {
+      gfx.push();
+      gfx.stroke(window.darkMode ? 40 : 240);
+      gfx.strokeWeight(1);
+      gfx.noFill();
+
+      // Draw vertical lines
+      for (let i = 0; i <= gridCols; i++) {
+        let x = gridOffsetX + i * cellWidth;
+        gfx.line(x, gridOffsetY, x, gridOffsetY + gridRows * cellHeight);
+      }
+
+      // Draw horizontal lines
+      for (let j = 0; j <= gridRows; j++) {
+        let y = gridOffsetY + j * cellHeight;
+        gfx.line(gridOffsetX, y, gridOffsetX + gridCols * cellWidth, y);
+      }
+
+      // Draw letters
+      gfx.textAlign(CENTER, CENTER);
+      gfx.textSize(16);
+      gfx.fill(window.darkMode ? 100 : 150);
+      gfx.noStroke();
+
+      let inverse = {};
+      if (RUNTIME_ALPHABET_MAP) {
+        for (let l in RUNTIME_ALPHABET_MAP) inverse[RUNTIME_ALPHABET_MAP[l]] = l;
+      } else {
+        for (let l in ALPHABET_DNA) inverse[ALPHABET_DNA[l].zoneIndex] = l;
+      }
+      const totalZones = gridCols * gridRows;
+      for (let z = 0; z < totalZones; z++) {
+        const letter = inverse[z];
+        if (!letter) continue; // leave empty cells blank
+        let col = z % gridCols;
+        let row = Math.floor(z / gridCols);
+        let x = gridOffsetX + col * cellWidth + cellWidth / 2;
+        let y = gridOffsetY + row * cellHeight + cellHeight / 2;
+        gfx.text(letter, x, y);
+      }
+
+      gfx.pop();
+    } catch (e) { /* ignore */ }
+  }
+
+  function drawDashedLineTo(gfx, x1, y1, x2, y2, dashLen = 5, gapLen = 5) {
+    let dx = x2 - x1; let dy = y2 - y1; let dist = Math.sqrt(dx * dx + dy * dy); if (dist === 0) return;
+    let stepLen = dashLen + gapLen; let steps = dist / stepLen; let unitX = dx / dist; let unitY = dy / dist;
+    for (let i = 0; i < steps; i++) {
+      let startX = x1 + i * stepLen * unitX; let startY = y1 + i * stepLen * unitY; let endX = startX + dashLen * unitX; let endY = startY + dashLen * unitY;
+      if ((unitX > 0 && endX > x2) || (unitX < 0 && endX < x2)) { endX = x2; endY = y2; }
+      if ((unitY > 0 && endY > y2) || (unitY < 0 && endY < y2)) { endX = x2; endY = y2; }
+      gfx.line(startX, startY, endX, endY);
+    }
+  }
+
+  function drawPathForWordTo(gfx, pathObj, startIndex) {
+    if (!pathObj || !Array.isArray(pathObj.points) || pathObj.points.length < 1) return;
+    const points = pathObj.points;
+    const color = pathObj.color;
+    if (points.length >= 2) {
+      gfx.push();
+      gfx.stroke(color);
+      gfx.strokeWeight(1);
+      gfx.noFill();
+      // dashed path
+      for (let i = 0; i < points.length - 1; i++) {
+        drawDashedLineTo(gfx, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+      }
+      // arrows
+      gfx.stroke(color);
+      gfx.strokeWeight(1);
+      gfx.fill(color);
+      for (let i = 0; i < points.length - 1; i++) {
+        let start = points[i]; let end = points[i + 1]; let midX = (start.x + end.x) / 2; let midY = (start.y + end.y) / 2; let dx = end.x - start.x; let dy = end.y - start.y; let angle = Math.atan2(dy, dx);
+        gfx.push(); gfx.translate(midX, midY); gfx.rotate(angle);
+        gfx.triangle(0, 0, -15, -2.5, -15, 2.5);
+        gfx.pop();
+      }
+      // markers
+      gfx.noStroke(); gfx.fill(color); gfx.ellipse(points[0].x, points[0].y, 12, 12);
+      if (points.length > 1) {
+        let end = points[points.length - 1]; gfx.stroke(color); gfx.strokeWeight(2); gfx.line(end.x - 6, end.y - 6, end.x + 6, end.y + 6); gfx.line(end.x + 6, end.y - 6, end.x - 6, end.y + 6);
+      }
+      // numbers
+      gfx.noStroke(); gfx.fill(color); gfx.textAlign(CENTER, CENTER); gfx.textSize(10);
+      for (let i = 0; i < points.length; i++) { let point = points[i]; gfx.text(startIndex + i + 1, point.x + 12, point.y - 12); }
+      gfx.pop();
+    } else {
+      gfx.push(); gfx.noStroke(); gfx.fill(pathObj.color); gfx.ellipse(points[0].x, points[0].y, 12, 12); gfx.pop();
+    }
+  }
+
+  // start building list of images to include
+  const w = (artLayer && artLayer.width) ? artLayer.width : width;
+  const h = (artLayer && artLayer.height) ? artLayer.height : height;
+  const overlays = (typeof window.showOverlays === 'undefined') ? true : window.showOverlays;
+  const wordLayers = (window.wordLayers && Array.isArray(window.wordLayers)) ? window.wordLayers : null;
+  const words = (window.wordStrings && Array.isArray(window.wordStrings)) ? window.wordStrings : null;
+  const paths = (typeof currentPaths !== 'undefined' && Array.isArray(currentPaths)) ? currentPaths : (window.currentPaths && Array.isArray(window.currentPaths) ? window.currentPaths : []);
+
+  const base = filename ? filename.replace(/\.png$/i, '') : ('aether-' + ts());
+  const toExport = [];
+
+  if (wordLayers && wordLayers.length > 0) {
+    for (let i = 0; i < wordLayers.length; i++) {
+      const buff = createGraphics(w, h);
+      buff.background(window.darkMode ? '#141414' : 255);
+      try { buff.image(wordLayers[i], 0, 0); } catch (e) {}
+      if (overlays) { drawGridTo(buff); try { drawPathForWordTo(buff, paths[i], 0); } catch (e) {} }
+      toExport.push({ name: base + '-' + (i + 1) + '-' + (words && words[i] ? sanitize(words[i]) : ('layer-' + (i + 1))), gfx: buff });
+    }
+
+    // final composition (respect visibility toggles)
+    const final = createGraphics(w, h);
+    final.background(window.darkMode ? '#141414' : 255);
+    for (let i = 0; i < wordLayers.length; i++) {
+      if (window.wordVisibility && window.wordVisibility[i] === false) continue;
+      try { final.image(wordLayers[i], 0, 0); } catch (e) {}
+    }
+    if (overlays) { drawGridTo(final); for (let i = 0; i < paths.length; i++) { if (window.wordVisibility && window.wordVisibility[i] === false) continue; try { drawPathForWordTo(final, paths[i], 0); } catch (e) {} } }
+    toExport.push({ name: base + '-final', gfx: final });
+  } else if (artLayer) {
+    const buff = createGraphics(w, h); buff.background(window.darkMode ? '#141414' : 255); try { buff.image(artLayer, 0, 0); } catch (e) {}
+    if (overlays) { drawGridTo(buff); for (let i = 0; i < paths.length; i++) drawPathForWordTo(buff, paths[i], 0); }
+    toExport.push({ name: base, gfx: buff });
+  } else {
+    console.warn('No content available to export.');
     return;
   }
 
-  // Create filename with timestamp if not provided
-  let name = filename;
-  if (!name) {
-    const ts = year() + nf(month(), 2) + nf(day(), 2) + '-' + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2);
-    name = 'aether-' + ts + '.png';
+  // convert canvas to blob helper
+  function canvasToBlob(gfx) {
+    return new Promise((resolve) => {
+      try {
+        if (gfx.canvas && gfx.canvas.toBlob) {
+          gfx.canvas.toBlob(function (b) { resolve(b); });
+        } else {
+          // fallback: dataURL -> blob
+          const data = gfx.canvas.toDataURL('image/png');
+          resolve(dataURLToBlob(data));
+        }
+      } catch (e) {
+        try { const data = gfx.canvas.toDataURL('image/png'); resolve(dataURLToBlob(data)); } catch (ex) { resolve(null); }
+      }
+    });
   }
 
-  // Create a temporary graphics buffer to hold the background + artlayer
-  let exportBuffer = createGraphics(artLayer.width, artLayer.height);
+  // Build blobs
+  const blobPromises = toExport.map(item => canvasToBlob(item.gfx).then(b => ({ name: item.name + '.png', blob: b, gfx: item.gfx })) );
 
-  // Fill background according to current mode
-  exportBuffer.background(window.darkMode ? '#141414' : 255);
-
-  // Draw the art layer on top of the background
-  exportBuffer.image(artLayer, 0, 0);
-
-  // Save the result — this ensures the file has a background instead of transparency
-  save(exportBuffer, name);
-  console.log('Exported PNG (with background):', name);
-
-  // Cleanup buffer
-  exportBuffer.remove();
+  Promise.all(blobPromises).then(async entries => {
+    try {
+      // Prefer JSZip if present (developer may add it later)
+      if (typeof JSZip !== 'undefined') {
+        const zip = new JSZip();
+        entries.forEach(e => { if (e.blob) zip.file(e.name, e.blob); });
+        const zipName = (base || 'aether') + '.zip';
+        const zb = await zip.generateAsync({ type: 'blob' });
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(zb);
+        a.href = url; a.download = zipName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+        console.log('Exported ZIP via JSZip:', zipName);
+      } else {
+        // Use built-in ZIP builder (stored, no compression)
+        const arrs = await Promise.all(entries.map(async e => {
+          if (!e.blob) return null;
+          const ab = await e.blob.arrayBuffer();
+          return { name: e.name, data: new Uint8Array(ab) };
+        }));
+        const filtered = arrs.filter(Boolean);
+        if (filtered.length === 0) throw new Error('No blob data available to build ZIP');
+        const zipBlob = buildZip(filtered);
+        const zipName = (base || 'aether') + '.zip';
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(zipBlob);
+        a.href = url; a.download = zipName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+        console.log('Exported ZIP (built-in):', zipName);
+      }
+    } catch (err) {
+      console.error('ZIP export failed, falling back to single final PNG', err);
+      // fallback: save final only
+      const finalEntry = entries[entries.length - 1];
+      if (finalEntry && finalEntry.blob) {
+        const fname = finalEntry.name;
+        const a2 = document.createElement('a');
+        const url2 = URL.createObjectURL(finalEntry.blob);
+        a2.href = url2; a2.download = fname;
+        document.body.appendChild(a2); a2.click(); a2.remove(); setTimeout(() => URL.revokeObjectURL(url2), 10000);
+      }
+    } finally {
+      // Cleanup p5 buffers
+      entries.forEach(e => { try { if (e.gfx && typeof e.gfx.remove === 'function') e.gfx.remove(); } catch (ex) {} });
+    }
+  }).catch(err => { console.error('Export failed:', err); });
 }
 
 // Expose as a global so index.html's export button can call it
