@@ -336,8 +336,11 @@ const Fluid = (function () {
 
   // Preset registry: external preset modules can register factories via `registerFluidPreset`.
   // Factories receive an `api` object and should return an inking function `(letter,x,y,chosenColor) => {}`.
-  function executeInking(letter, x, y, chosenColor) {
-    if (!artLayer) return;
+  // Now accepts optional targetLayer parameter. If provided, engine.compose will write to that layer instead of main artLayer.
+  function executeInking(letter, x, y, chosenColor, targetLayer) {
+    // default target is the shared artLayer
+    targetLayer = targetLayer || artLayer;
+    if (!targetLayer) return;
     // Prefer window-managed current style, then DOM selector, fall back to aether-soft
     let styleName = 'aether-soft';
     try {
@@ -345,7 +348,7 @@ const Fluid = (function () {
       else if (typeof document !== 'undefined' && document.getElementById('styleSelector')) styleName = document.getElementById('styleSelector').value;
     } catch (e) { styleName = 'aether-soft'; }
 
-    console.log('[Fluid] requested style:', styleName, 'letter:', letter, 'pos:', x, y);
+    console.log('[Fluid] requested style:', styleName, 'letter:', letter, 'pos:', x, y, 'target:', !!targetLayer);
 
     // Map style name to engine object
     let engineKey = styleName.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('') + 'Engine';
@@ -357,33 +360,33 @@ const Fluid = (function () {
     try {
       // Ensure new ink is composited on top of existing content (defensive fix)
       try {
-        if (artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation !== 'source-over') {
-          artLayer.drawingContext.globalCompositeOperation = 'source-over';
+        if (targetLayer && targetLayer.drawingContext && targetLayer.drawingContext.globalCompositeOperation !== 'source-over') {
+          targetLayer.drawingContext.globalCompositeOperation = 'source-over';
         }
       } catch (_) { /* ignore if unavailable */ }
 
       try {
-        console.log('[Fluid] composite BEFORE execute:', artLayer && artLayer.drawingContext && artLayer.drawingContext.globalCompositeOperation);
+        console.log('[Fluid] composite BEFORE execute:', targetLayer && targetLayer.drawingContext && targetLayer.drawingContext.globalCompositeOperation);
       } catch (e) { /* ignore */ }
 
-      // Call engine in isolated mode: engine draws into its own internal buffer and then composes onto the main artLayer
+      // Call engine in isolated mode: engine draws into its own internal buffer and then composes onto the provided targetLayer
       try {
-        // initialize engine buffer size if possible
-        try { if (typeof engine.init === 'function') engine.init({ width: artLayer.width || width, height: artLayer.height || height }); } catch (e) { }
+        // initialize engine buffer size according to target layer
+        try { if (typeof engine.init === 'function') engine.init({ width: targetLayer.width || width, height: targetLayer.height || height }); } catch (e) { }
 
         // Execute into engine's internal buffer
         engine.execute(letter, x, y, chosenColor);
 
-        // Then let engine composite its buffer onto the real artLayer
+        // Then let engine composite its buffer onto the chosen targetLayer
         if (typeof engine.compose === 'function') {
-          try { engine.compose(artLayer); } catch (e) { console.error('[Fluid] engine.compose failed', e); }
+          try { engine.compose(targetLayer); } catch (e) { console.error('[Fluid] engine.compose failed', e); }
         } else {
           // fallback: if engine has no compose method, call it directly (legacy) — this may affect globals
           try { engine.execute(letter, x, y, chosenColor); } catch (e) { console.error('[Fluid] legacy engine direct execute failed', e); }
         }
 
         try {
-          console.log('[Fluid] executed inking for', styleName, 'at', x, y);
+          console.log('[Fluid] executed inking for', styleName, 'at', x, y, '-> target');
         } catch (e) { /* ignore */ }
       } catch (err) {
         console.error('[Fluid] engine.execute error (fallback to direct):', err);

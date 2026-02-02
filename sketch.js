@@ -401,6 +401,43 @@ function startGeneration(text) {
     }
   }
 
+  // Expose visibility toggles for UI: default all visible and render checkboxes
+  const wordStrings = wordArrays.map(arr => arr.join(''));
+  window.wordVisibility = wordStrings.map(() => true);
+  try { if (typeof window.renderWordToggles === 'function') { console.log('[Sketch] calling renderWordToggles'); window.renderWordToggles(wordStrings); } } catch (e) { console.warn('[Sketch] renderWordToggles failed', e); }
+
+  // Create per-word offscreen layers so we can show/hide paints independently
+  try {
+    // Clear any existing layers first
+    if (window.wordLayers && Array.isArray(window.wordLayers)) {
+      window.wordLayers.forEach(l => { try { if (typeof l.clear === 'function') l.clear(); } catch (e) {} });
+    }
+    window.wordLayers = wordStrings.map(() => {
+      const w = (artLayer && artLayer.width) ? artLayer.width : width;
+      const h = (artLayer && artLayer.height) ? artLayer.height : height;
+      const g = createGraphics(w, h);
+      try { if (typeof g.clear === 'function') g.clear(); } catch (e) { /* ignore */ }
+      return g;
+    });
+  } catch (e) {
+    window.wordLayers = [];
+  }
+
+  // Helper: recompose visible per-word layers onto the shared artLayer
+  window.recomposeArtLayer = function () {
+    try {
+      if (!artLayer) return;
+      if (typeof artLayer.clear === 'function') artLayer.clear(); else { artLayer.push(); artLayer.noStroke(); artLayer.background(0, 0); artLayer.pop(); }
+      // ensure normal composite
+      try { if (artLayer && artLayer.drawingContext) artLayer.drawingContext.globalCompositeOperation = 'source-over'; } catch (e) { /* ignore */ }
+      if (!window.wordLayers) return;
+      for (let i = 0; i < window.wordLayers.length; i++) {
+        if (window.wordVisibility && window.wordVisibility[i] === false) continue;
+        try { artLayer.image(window.wordLayers[i], 0, 0); } catch (e) { /* ignore */ }
+      }
+    } catch (e) { /* ignore */ }
+  };
+
   // Start animation
   currentWordIndex = 0;
   currentPointIndex = 0;
@@ -439,12 +476,19 @@ function updateNozzle() {
       // Add to visited
       let currentPoint = currentPaths[currentWordIndex].points[currentPointIndex];
       visitedPoints.push({ x: nozzle.x, y: nozzle.y, letter: currentPoint.letter });
-      // Execute inking hook (delegated to Fluid module)
-      if (typeof Fluid !== 'undefined' && Fluid.executeInking) {
+      // Execute inking into per-word layer only if this word is visible. We still keep per-word buffers so we can recompose/hide later.
+      if (window.wordVisibility && window.wordVisibility[currentWordIndex] === false) {
+        // skip inking for hidden word (do not add new paint)
+      } else if (typeof Fluid !== 'undefined' && Fluid.executeInking) {
         try {
           console.log('[Sketch] Fluid.executeInking -> wordIndex=', currentWordIndex, 'pointIndex=', currentPointIndex, 'color=', currentPaths[currentWordIndex].fluidColor);
         } catch (e) { /* ignore logging errors */ }
-        Fluid.executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].fluidColor);
+        try {
+          const target = (window.wordLayers && window.wordLayers[currentWordIndex]) ? window.wordLayers[currentWordIndex] : undefined;
+          Fluid.executeInking(currentPoint.letter, nozzle.x, nozzle.y, currentPaths[currentWordIndex].fluidColor, target);
+          // Immediately update main art layer to reflect visibility changes
+          try { if (typeof window.recomposeArtLayer === 'function') window.recomposeArtLayer(); } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore */ }
       }
       nozzle.pauseUntil = millis() + 100; // Short pause 0.1s
     }
@@ -457,6 +501,10 @@ function updateNozzle() {
 function drawCompletedWords() {
   let globalIndex = 0;
   for (let i = 0; i < currentWordIndex; i++) {
+    if (window.wordVisibility && window.wordVisibility[i] === false) {
+      globalIndex += currentPaths[i].points.length;
+      continue;
+    }
     drawPathForWord(currentPaths[i], globalIndex);
     globalIndex += currentPaths[i].points.length;
   }
@@ -464,6 +512,9 @@ function drawCompletedWords() {
 
 function drawCurrentTrail() {
   if (currentWordIndex < currentPaths.length) {
+    // If current word is hidden, don't draw its trail
+    if (window.wordVisibility && window.wordVisibility[currentWordIndex] === false) return;
+
     let word = currentPaths[currentWordIndex];
     let color = word.color;
     stroke(color);

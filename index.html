@@ -74,6 +74,36 @@
       pointer-events: auto;
     }
 
+    #text-area-wrap {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    #word-toggles {
+      min-width: 180px;
+      max-height: 140px;
+      overflow: auto;
+      padding: 6px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.06);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+    }
+
+    #word-toggles label {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      color: rgba(0,0,0,0.7);
+      margin-bottom: 6px;
+    }
+
+    #word-toggles input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+
     textarea {
       width: 400px;
       height: 100px;
@@ -564,7 +594,12 @@
     </div>
 
     <div id="input-container">
-      <textarea id="text-input">Small Things</textarea>
+      <div id="text-area-wrap" style="display:flex; gap:16px; align-items:flex-start;">
+        <textarea id="text-input">Small Things</textarea>
+        <div id="word-toggles" style="min-width:180px; max-height:140px; overflow:auto; padding:6px; border-radius:6px; background:rgba(255,255,255,0.06); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);">
+          <!-- checkboxes for each parsed word will be rendered here -->
+        </div>
+      </div>
       <div style="display:flex; gap:8px; margin-top:10px;">
         <button id="generate-btn">Generate</button>
       </div>
@@ -837,6 +872,75 @@
       updateIndicator();
       window.refreshPaletteUI = () => { populateDropdown(); updateIndicator(); };
     })();
+  </script>
+  <script>
+    // Word toggles UI: render checkboxes for each parsed word and expose visibility map
+    function renderWordToggles(words) {
+      const wrap = document.getElementById('word-toggles');
+      if (!wrap) return;
+      console.log('[UI] renderWordToggles called, words=', words);
+      wrap.innerHTML = '';
+      window.wordVisibility = words.map(() => true);
+
+      words.forEach((w, idx) => {
+        const label = document.createElement('label');
+        label.className = 'word-toggle';
+        label.style.cursor = 'pointer';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.disabled = false; // ensure explicitly enabled
+        cb.tabIndex = 0;
+        cb.style.pointerEvents = 'auto';
+        cb.dataset.index = idx;
+        cb.addEventListener('change', (e) => {
+          const i = parseInt(e.target.dataset.index, 10);
+          window.wordVisibility[i] = e.target.checked;
+          // If we toggled off the current word, advance to next visible
+          if (typeof currentWordIndex !== 'undefined' && typeof currentPaths !== 'undefined') {
+            if (i === currentWordIndex && !window.wordVisibility[i]) setTargetToCurrent();
+          }
+          // Recompose the main art layer to reflect visibility change
+          try { if (typeof window.recomposeArtLayer === 'function') window.recomposeArtLayer(); } catch (err) { /* ignore */ }
+        });
+
+        const span = document.createElement('span');
+        span.textContent = `${idx + 1}. ${w}`;
+
+        label.appendChild(cb);
+        label.appendChild(span);
+        wrap.appendChild(label);
+      });
+    }
+
+    // Optional: show preview of words while editing (disabled checkboxes)
+    function renderPreviewWordToggles(words) {
+      const wrap = document.getElementById('word-toggles');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      words.forEach((w, idx) => {
+        const label = document.createElement('label');
+        label.className = 'word-toggle preview';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = true; cb.disabled = true;
+        const span = document.createElement('span');
+        span.textContent = `${idx + 1}. ${w}`;
+        label.appendChild(cb);
+        label.appendChild(span);
+        wrap.appendChild(label);
+      });
+    }
+
+    // Keep a live preview of the words as the user types
+    document.getElementById('text-input').addEventListener('input', (e) => {
+      const clean = (e.target.value || '').replace(/[^\w\s]/g, '');
+      const words = clean.split(/\s+/).filter(Boolean);
+      renderPreviewWordToggles(words);
+    });
+
+    // Initialize preview on load
+    renderPreviewWordToggles((document.getElementById('text-input').value || '').replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
   </script>
 </body>
 
