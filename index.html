@@ -5,6 +5,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-hYWIAfMGslfcEXBB1cFlFmDNK/21FcwO3bwz21S99g4=' 'sha256-MXpaPQIyPN2TFYT0DuPvw8jAqNAKgfTCn8vp4oEi1Ts=' 'sha256-uSUCrg2OyOpuM12VKq5MuAXB94PK/yW9X4qkw5H47yU=' 'sha256-QwdyxfVFs3L4QH+B6idT4hKVryuGUMkJybt8NerEkqs=' 'sha256-Zv/kcnNEAvuBMgJvoNpnvIDALDUOx+WpI2c3A9rJxCs=' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';">
   <title>AETHER - Sequential Watercolor Generator</title>
   <script>
     // External libs whitelist for optional SRI support.
@@ -13,7 +14,7 @@
     window.EXTERNAL_LIBS = {
       p5: { src: 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js', integrity: 'sha384-bOv+b6RV+dlZvdQAx6+cJ+FK9ab8JCSVWyJ1JPhMVQjPW+4C8V2cOKK+qZDfnRnx' },
       glMatrix: { src: 'https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js', integrity: 'sha384-iZsEdQFxjZXMEJXbMmLFgTxAXLIhscrTeHOe466nX1siiBSQreDzjxh1VJDWBjya' },
-      p5brush: { src: 'https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js', integrity: 'sha384-PG8iJHwykSjvvzKF+jg9227QPDDG7NzgkPYvkSTfXd5CbBXQXmm9TfbWPJ3SmPdr' }
+      p5brush: { src: 'https://cdn.jsdelivr.net/npm/p5.brush@1.6.3/dist/p5.brush.min.js', integrity: 'sha384-YVfkyjEbhgx5evSi2cqVDKsNR+mBoCbHdFv+ftuFA/BARX5NSeEvosvVqz7aIaaL' }
     };
 
     window.loadExternalLib = function (key) {
@@ -28,9 +29,8 @@
             s.integrity = info.integrity;
             s.crossOrigin = 'anonymous';
           } else {
-            // still use anonymous CORS to avoid tainting; warn to encourage setting SRI
-            s.crossOrigin = 'anonymous';
-            console.warn('SRI integrity not set for external lib:', key, ' — set EXTERNAL_LIBS.' + key + '.integrity to enforce SRI');
+            // Strict Mode: Reject if SRI integrity is missing.
+            return reject(new Error('Security Error: SRI integrity hash is missing for ' + key));
           }
           s.onload = () => resolve(true);
           s.onerror = (e) => reject(new Error('Failed to load ' + info.src));
@@ -44,7 +44,7 @@
   </script>
   <!-- p5.brush loader removed (loaded dynamically to avoid runtime errors) -->
   <!-- Material Symbols for minimal export icon -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" crossorigin="anonymous" />
   <style>
     body {
       margin: 0;
@@ -820,7 +820,7 @@
 
       function populateDropdown() {
         if (!grid) return;
-        grid.innerHTML = '';
+        grid.textContent = '';
 
         // Add Random option in 'all' category
         if (currentCategory === 'all') {
@@ -932,7 +932,7 @@
       const wrap = document.getElementById('word-toggles');
       if (!wrap) return;
       console.log('[UI] renderWordToggles called, words=', words);
-      wrap.innerHTML = '';
+      wrap.textContent = '';
       window.wordVisibility = words.map(() => true);
 
       words.forEach((w, idx) => {
@@ -971,7 +971,7 @@
     function renderPreviewWordToggles(words) {
       const wrap = document.getElementById('word-toggles');
       if (!wrap) return;
-      wrap.innerHTML = '';
+      wrap.textContent = '';
       words.forEach((w, idx) => {
         const label = document.createElement('label');
         label.className = 'word-toggle preview';

@@ -83,16 +83,18 @@ function loadBrushes(layer) {
       document.head.appendChild(s);
     });
   }
-  // Prefer using the global `loadExternalLib` loader (which supports SRI) when available.
-  const loadWithFallback = (key, url) => {
+  // Strict Mode: ONLY use loadExternalLib (with SRI), never fallback to insecure loadScript
+  const loadWithSRI = (key) => {
     if (typeof window.loadExternalLib === 'function') {
-      return window.loadExternalLib(key).catch(() => loadScript(url));
+      return window.loadExternalLib(key);
     }
-    return loadScript(url);
+    // If loadExternalLib is not available, fail fast - don't load scripts insecurely
+    console.error('[Security] loadExternalLib not available, refusing to load:', key);
+    return Promise.reject(new Error('loadExternalLib not available - security policy prevents insecure script loading'));
   };
 
-  return loadWithFallback('glMatrix', 'https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js')
-    .then(() => loadWithFallback('p5brush', 'https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js'))
+  return loadWithSRI('glMatrix')
+    .then(() => loadWithSRI('p5brush'))
     .then(() => {
       try {
         if (window.p5Brush && typeof window.p5Brush.init === 'function') window.p5Brush.init(layer);
@@ -763,7 +765,48 @@ function highlightCells() {
 async function exportPNG(filename) {
   // helpers
   function ts() { return year() + nf(month(), 2) + nf(day(), 2) + '-' + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2); }
-  function sanitize(s) { if (!s) return 'layer'; return String(s).trim().replace(/\s+/g, '-').replace(/[^A-Za-z0-9-_\.]/g, '').replace(/-+/g, '-'); }
+  
+  // Secure filename sanitization with protection against path traversal and reserved names
+  function sanitize(s) { 
+    if (!s) return 'layer';
+    
+    // Convert to string and trim
+    let clean = String(s).trim();
+    
+    // Remove path separators and parent directory references
+    clean = clean.replace(/[\/\\]/g, '');
+    
+    // Replace spaces with dashes
+    clean = clean.replace(/\s+/g, '-');
+    
+    // Remove all non-alphanumeric except dash, underscore, dot
+    clean = clean.replace(/[^A-Za-z0-9-_\.]/g, '');
+    
+    // Collapse multiple dashes and remove leading/trailing dashes
+    clean = clean.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+    
+    // Remove leading dots to prevent hidden files and directory traversal
+    clean = clean.replace(/^\.*/, '');
+    
+    // Protect against Windows reserved names
+    const windowsReserved = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i;
+    if (windowsReserved.test(clean)) {
+      clean = 'file-' + clean;
+    }
+    
+    // Limit filename length (max 200 chars to be safe with ZIP and various filesystems)
+    if (clean.length > 200) {
+      const ext = clean.match(/\.[^.]+$/);
+      if (ext) {
+        clean = clean.substring(0, 200 - ext[0].length) + ext[0];
+      } else {
+        clean = clean.substring(0, 200);
+      }
+    }
+    
+    // Final fallback if everything was stripped
+    return clean || 'layer';
+  }
 
   // canvas -> Blob helper
   function canvasToBlob(gfx) {
@@ -988,7 +1031,9 @@ async function exportPNG(filename) {
   const words = (window.wordStrings && Array.isArray(window.wordStrings)) ? window.wordStrings : null;
   const paths = (typeof currentPaths !== 'undefined' && Array.isArray(currentPaths)) ? currentPaths : (window.currentPaths && Array.isArray(window.currentPaths) ? window.currentPaths : []);
 
-  const base = filename ? filename.replace(/\.png$/i, '') : ('aether-' + ts());
+  // Sanitize base filename to prevent path traversal and zip-slip attacks
+  let base = filename ? filename.replace(/\.png$/i, '') : ('aether-' + ts());
+  base = sanitize(base);
   const toExport = [];
 
   if (wordLayers && wordLayers.length > 0) {
