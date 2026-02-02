@@ -11,9 +11,9 @@
     // Fill `integrity` with the correct SRI hash (sha384-...) for each entry to enforce SRI.
     // If `integrity` is null, the loader will still load the resource but will warn in the console.
     window.EXTERNAL_LIBS = {
-      p5: { src: 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js', integrity: null },
-      glMatrix: { src: 'https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js', integrity: null },
-      p5brush: { src: 'https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js', integrity: null }
+      p5: { src: 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js', integrity: 'sha384-bOv+b6RV+dlZvdQAx6+cJ+FK9ab8JCSVWyJ1JPhMVQjPW+4C8V2cOKK+qZDfnRnx' },
+      glMatrix: { src: 'https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js', integrity: 'sha384-iZsEdQFxjZXMEJXbMmLFgTxAXLIhscrTeHOe466nX1siiBSQreDzjxh1VJDWBjya' },
+      p5brush: { src: 'https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js', integrity: 'sha384-PG8iJHwykSjvvzKF+jg9227QPDDG7NzgkPYvkSTfXd5CbBXQXmm9TfbWPJ3SmPdr' }
     };
 
     window.loadExternalLib = function (key) {
