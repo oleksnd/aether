@@ -70,6 +70,8 @@ function loadBrushes(layer) {
       const s = document.createElement('script');
       s.src = src;
       s.async = true;
+      // Use anonymous CORS to avoid tainting and keep behavior consistent with loadExternalLib
+      s.crossOrigin = 'anonymous';
       s.onload = () => {
         try { console.log('[LoadScript] Loaded', src); } catch (e) { }
         resolve(true);
