@@ -81,9 +81,16 @@ function loadBrushes(layer) {
       document.head.appendChild(s);
     });
   }
+  // Prefer using the global `loadExternalLib` loader (which supports SRI) when available.
+  const loadWithFallback = (key, url) => {
+    if (typeof window.loadExternalLib === 'function') {
+      return window.loadExternalLib(key).catch(() => loadScript(url));
+    }
+    return loadScript(url);
+  };
 
-  return loadScript('https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js')
-    .then(() => loadScript('https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js'))
+  return loadWithFallback('glMatrix', 'https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js')
+    .then(() => loadWithFallback('p5brush', 'https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js'))
     .then(() => {
       try {
         if (window.p5Brush && typeof window.p5Brush.init === 'function') window.p5Brush.init(layer);

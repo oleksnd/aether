@@ -6,7 +6,42 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AETHER - Sequential Watercolor Generator</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <script>
+    // External libs whitelist for optional SRI support.
+    // Fill `integrity` with the correct SRI hash (sha384-...) for each entry to enforce SRI.
+    // If `integrity` is null, the loader will still load the resource but will warn in the console.
+    window.EXTERNAL_LIBS = {
+      p5: { src: 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js', integrity: null },
+      glMatrix: { src: 'https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js', integrity: null },
+      p5brush: { src: 'https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.min.js', integrity: null }
+    };
+
+    window.loadExternalLib = function (key) {
+      return new Promise((resolve, reject) => {
+        try {
+          const info = window.EXTERNAL_LIBS && window.EXTERNAL_LIBS[key];
+          if (!info) return reject(new Error('Unknown external lib: ' + String(key)));
+          const s = document.createElement('script');
+          s.src = info.src;
+          // Set integrity only when explicitly provided.
+          if (info.integrity) {
+            s.integrity = info.integrity;
+            s.crossOrigin = 'anonymous';
+          } else {
+            // still use anonymous CORS to avoid tainting; warn to encourage setting SRI
+            s.crossOrigin = 'anonymous';
+            console.warn('SRI integrity not set for external lib:', key, ' — set EXTERNAL_LIBS.' + key + '.integrity to enforce SRI');
+          }
+          s.onload = () => resolve(true);
+          s.onerror = (e) => reject(new Error('Failed to load ' + info.src));
+          document.head.appendChild(s);
+        } catch (err) { reject(err); }
+      });
+    };
+
+    // Load p5 early. If SRI is configured in EXTERNAL_LIBS.p5.integrity it will be enforced.
+    window.loadExternalLib('p5').catch(err => { console.warn('p5 load failed:', err); });
+  </script>
   <!-- p5.brush loader removed (loaded dynamically to avoid runtime errors) -->
   <!-- Material Symbols for minimal export icon -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
@@ -720,29 +755,47 @@
     })();
   </script>
   <script>
-    // Dynamic engine loading
+    // Dynamic engine loading with strict whitelist to avoid path injection
     let loadedEngines = new Set();
 
+    const ENGINE_WHITELIST = {
+      'aether-soft': 'engines/aether-soft/engine.aether-soft.js',
+      'aether-soft-modern': 'engines/aether-soft-modern/engine.aether-soft-modern.js',
+      'liquid-ink': 'engines/liquid-ink/engine.liquid-ink.js',
+      'oil-brush': 'engines/oil-brush/engine.oil-brush.js',
+      'splatter': 'engines/splatter/engine.splatter.js',
+      'fractal-tree': 'engines/fractal-tree/engine.fractal-tree.js',
+      'torn-wet-brush': 'engines/torn-wet-brush/engine.torn-wet-brush.js'
+    };
+
     function loadEngine(style) {
+      // Only allow styles explicitly present in the whitelist
+      if (!ENGINE_WHITELIST.hasOwnProperty(style)) return Promise.reject(new Error('Engine not allowed: ' + String(style)));
       if (loadedEngines.has(style)) return Promise.resolve();
+
       return new Promise((resolve) => {
         const script = document.createElement('script');
-        // Prefer named engine file (engine.<style>.js) to avoid ambiguous engine.js files
-        // Added cache-buster to ensure the latest engine code is loaded
-        const named = `engines/${style}/engine.${style}.js?v=` + Date.now();
-        const legacy = `engines/${style}/engine.js?v=` + Date.now();
-        script.src = named;
+        // Use the whitelisted path and add a cache-buster
+        const src = ENGINE_WHITELIST[style] + '?v=' + Date.now();
+        script.src = src;
         script.onload = () => {
           loadedEngines.add(style);
           resolve();
         };
         script.onerror = () => {
-          // fallback to legacy path for backward compatibility
-          const fallback = document.createElement('script');
-          fallback.src = legacy;
-          fallback.onload = () => { loadedEngines.add(style); resolve(); };
-          fallback.onerror = () => resolve();
-          document.head.appendChild(fallback);
+          // If the named file fails, attempt a safe, directory-local legacy fallback
+          try {
+            const dir = ENGINE_WHITELIST[style].replace(/\/engine\.[^/]+$/, '');
+            const legacy = dir + '/engine.js?v=' + Date.now();
+            const fallback = document.createElement('script');
+            fallback.src = legacy;
+            fallback.onload = () => { loadedEngines.add(style); resolve(); };
+            fallback.onerror = () => { console.warn('Failed to load engine:', style, src); resolve(); };
+            document.head.appendChild(fallback);
+          } catch (e) {
+            console.warn('Engine load error for', style, e);
+            resolve();
+          }
         };
         document.head.appendChild(script);
       });
