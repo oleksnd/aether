@@ -80,6 +80,7 @@
       transform: translateX(-50%);
       height: 20px;
       pointer-events: auto;
+      cursor: pointer;
     }
 
     #input-container {
@@ -122,6 +123,12 @@
     #word-toggles input[type="checkbox"] {
       width: 16px;
       height: 16px;
+    }
+
+    /* Make checkboxes use black accent instead of browser default blue */
+    #word-toggles input[type="checkbox"] {
+      accent-color: #000;
+      color: #000;
     }
 
     textarea {
@@ -277,6 +284,23 @@
     body.dark-mode textarea {
       background: rgba(0, 0, 0, 0.5);
       color: #eee;
+    }
+
+    /* Dark-mode: make word toggle labels white and keep native checkbox appearance but invert colors (white box, black check) */
+    body.dark-mode #word-toggles label {
+      color: #eee;
+    }
+
+    body.dark-mode #word-toggles input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: 1.5px solid #eee;
+      background: #fff;
+      accent-color: #000;
+      -webkit-appearance: auto;
+      appearance: auto;
+      box-sizing: border-box;
     }
 
     body.dark-mode button#generate-btn {
@@ -543,7 +567,9 @@
 <body>
   <div id="canvas-container"></div>
   <div id="ui">
-    <img id="logo" src="assets/logo.svg" alt="Logo">
+    <a id="home-link" href="./" title="Home" style="pointer-events:auto; display:inline-block;">
+      <img id="logo" src="assets/logo.svg" alt="Logo">
+    </a>
 
     <div id="left-ui"
       style="position:absolute; top:12px; left:12px; display:flex; gap:8px; align-items:center; pointer-events:auto; z-index:60;">
