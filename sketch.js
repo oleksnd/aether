@@ -64,25 +64,6 @@ let artLayer; // Isolated art layer for watercolor
 // Dynamically load gl-matrix then p5.brush so runtime errors (like missing mat4) are avoidable
 function loadBrushes(layer) {
   if (window.p5BrushLoaded || window.Brush || window.p5Brush || window.P5Brush) return Promise.resolve();
-
-  function loadScript(src) {
-    return new Promise((resolve) => {
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      // Use anonymous CORS to avoid tainting and keep behavior consistent with loadExternalLib
-      s.crossOrigin = 'anonymous';
-      s.onload = () => {
-        try { console.log('[LoadScript] Loaded', src); } catch (e) { }
-        resolve(true);
-      };
-      s.onerror = () => {
-        try { console.warn('[LoadScript] Failed to load', src); } catch (e) { }
-        resolve(false);
-      };
-      document.head.appendChild(s);
-    });
-  }
   // Strict Mode: ONLY use loadExternalLib (with SRI), never fallback to insecure loadScript
   const loadWithSRI = (key) => {
     if (typeof window.loadExternalLib === 'function') {
@@ -199,10 +180,6 @@ function setup() {
         try { console.log('[UI] fluid style changed ->', window.currentFluidStyle); } catch (e) { }
         updateBrushSliderVisibility();
       });
-
-      // additional hooks to ensure visibility toggles in edge cases
-      styleSel.addEventListener('input', () => updateBrushSliderVisibility());
-      styleSel.addEventListener('click', () => updateBrushSliderVisibility());
 
       // additional hooks to ensure visibility toggles in edge cases
       styleSel.addEventListener('input', () => updateBrushSliderVisibility());

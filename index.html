@@ -6,6 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-hYWIAfMGslfcEXBB1cFlFmDNK/21FcwO3bwz21S99g4=' 'sha256-MXpaPQIyPN2TFYT0DuPvw8jAqNAKgfTCn8vp4oEi1Ts=' 'sha256-uSUCrg2OyOpuM12VKq5MuAXB94PK/yW9X4qkw5H47yU=' 'sha256-QwdyxfVFs3L4QH+B6idT4hKVryuGUMkJybt8NerEkqs=' 'sha256-Zv/kcnNEAvuBMgJvoNpnvIDALDUOx+WpI2c3A9rJxCs=' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self';">
+  <meta name="referrer" content="no-referrer">
   <title>AETHER - Sequential Watercolor Generator</title>
   <script>
     // External libs whitelist for optional SRI support.
@@ -46,22 +47,6 @@
   <!-- Material Symbols for minimal export icon -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" crossorigin="anonymous" />
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      font-family: 'Courier New', monospace;
-      background: #f5f5f5;
-    }
-
-    #canvas-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-    }
-
     body {
       margin: 0;
       padding: 0;
