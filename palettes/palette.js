@@ -533,6 +533,402 @@ window.PALETTES = [
     name: 'Yellow Sports Car (Желтый спорткар)',
     category: 'vivid',
     colors: ['#2D2525', '#B85C2E', '#DB8E50', '#DECD3C', '#EAE1D3']
+  },
+  // --- Added: New Batch from USER
+  {
+    id: 'misty-forest',
+    name: 'Misty Forest (Туманный лес)',
+    category: 'atmosphere',
+    colors: ['#728BA1', '#CFE7FD', '#798FD5', '#153A81', '#172635']
+  },
+  {
+    id: 'heron-flight',
+    name: "Heron's Flight (Полет цапли)",
+    category: 'nature',
+    colors: ['#1E2328', '#737B7B', '#C2C5C5', '#F5F9FA', '#A6865E']
+  },
+  {
+    id: 'ethereal-flight',
+    name: 'Ethereal Flight (Эфирный полет)',
+    category: 'atmosphere',
+    colors: ['#4B7071', '#9EC8CB', '#F7F7E8', '#C4B596', '#7F6A52']
+  },
+  {
+    id: 'tidal-wave',
+    name: 'Tidal Wave (Приливная волна)',
+    category: 'nature',
+    colors: ['#4C625D', '#6E8882', '#A1C3BF', '#E0E4DA', '#798D8D']
+  },
+  {
+    id: 'wisteria-dream',
+    name: 'Wisteria Dream (Мечта глицинии)',
+    category: 'floral',
+    colors: ['#332A3B', '#575276', '#8076A7', '#AEAED0', '#DEE2ED']
+  },
+  {
+    id: 'nocturnal-bloom',
+    name: 'Nocturnal Bloom (Ночное цветение)',
+    category: 'floral',
+    colors: ['#00263E', '#62729D', '#9CA2C0', '#CED2E2', '#D29C2D']
+  },
+  {
+    id: 'mint-chocolate',
+    name: 'Mint Chocolate (Мятный шоколад)',
+    category: 'vivid',
+    colors: ['#81D1CE', '#D0F7F2', '#F1F4FA', '#6D4121', '#402316']
+  },
+  {
+    id: 'fig-harvest',
+    name: 'Fig Harvest (Урожай инжира)',
+    category: 'nature',
+    colors: ['#C54425', '#E7DC80', '#DDE4F3', '#6B5565', '#000000']
+  },
+  {
+    id: 'berry-essence',
+    name: 'Berry Essence (Ягодная эссенция)',
+    category: 'nature',
+    colors: ['#111C2E', '#4A6B8A', '#A69B97', '#6A3205', '#2F170B']
+  },
+  {
+    id: 'summer-lavender',
+    name: 'Summer Lavender (Летняя лаванда)',
+    category: 'floral',
+    colors: ['#B6B630', '#E0D1BC', '#BB84BF', '#714E84', '#111144']
+  },
+  {
+    id: 'travelers-trunk',
+    name: "Traveler's Trunk (Сундук путешественника)",
+    category: 'earth',
+    colors: ['#7E8DA1', '#C2C9CA', '#A3856D', '#8E3B24', '#281D0B']
+  },
+  // --- Added: Second Batch from USER
+  {
+    id: 'coastal-ride',
+    name: 'Coastal Ride (Прибрежная прогулка)',
+    category: 'atmosphere',
+    colors: ['#AD7A5E', '#E3B68A', '#F9F4F7', '#CEE5F2', '#67A4CF']
+  },
+  {
+    id: 'spring-buds',
+    name: 'Spring Buds (Весенние почки)',
+    category: 'floral',
+    colors: ['#C6212D', '#F9F9F9', '#A8DADC', '#37888F', '#3E654E']
+  },
+  {
+    id: 'autumnal-wood',
+    name: 'Autumnal Wood (Осенний лес)',
+    category: 'nature',
+    colors: ['#323232', '#69A794', '#A8A23E', '#A06B2B', '#4B2C1C']
+  },
+  {
+    id: 'merchant-crate',
+    name: 'Merchant Crate (Торговый ящик)',
+    category: 'earth',
+    colors: ['#F2F1ED', '#1B2E3C', '#C58236', '#5B4E44', '#000000']
+  },
+  {
+    id: 'lotus-garden',
+    name: 'Lotus Garden (Сад лотосов)',
+    category: 'floral',
+    colors: ['#2D3D26', '#7EAB9D', '#748E55', '#B6A4B8', '#AC5C9E']
+  },
+  {
+    id: 'lagoon-escape',
+    name: 'Lagoon Escape (Побег в лагуну)',
+    category: 'nature',
+    colors: ['#555555', '#A1C959', '#F0FDF8', '#3EC1D3', '#1B6B73']
+  },
+  {
+    id: 'frosty-morning',
+    name: 'Frosty Morning (Морозное утро)',
+    category: 'atmosphere',
+    colors: ['#455A64', '#78909C', '#B0BEC5', '#F5F5F1', '#908470']
+  },
+  {
+    id: 'arctic-horizon',
+    name: 'Arctic Horizon (Арктический горизонт)',
+    category: 'atmosphere',
+    colors: ['#9E97BA', '#FBAF53', '#FFEAAD', '#A1B1C2', '#007EA7']
+  },
+  {
+    id: 'english-garden',
+    name: 'English Garden (Английский сад)',
+    category: 'floral',
+    colors: ['#679B3E', '#ED4E6D', '#FDB3C4', '#DEEFF2', '#4BB0BD']
+  },
+  {
+    id: 'poppy-field',
+    name: 'Poppy Field (Маковое поле)',
+    category: 'vivid',
+    colors: ['#00865E', '#36D1F7', '#A1EDD8', '#FF8C5A', '#ED1C24']
+  },
+  {
+    id: 'secret-heart',
+    name: 'Secret Heart (Тайное сердце)',
+    category: 'classic',
+    colors: ['#854D4F', '#C14E5D', '#D1FDF2', '#258C96', '#004D54']
+  },
+  {
+    id: 'cascading-water',
+    name: 'Cascading Water (Каскад воды)',
+    category: 'nature',
+    colors: ['#D9F2FF', '#84B4CF', '#43675F', '#2F5D72', '#001C2E']
+  },
+  // --- Added: Third Batch from USER
+  {
+    id: 'blue-ridge',
+    name: 'Blue Ridge (Голубой хребет)',
+    category: 'atmosphere',
+    colors: ['#000033', '#00538A', '#00A0DC', '#F0EAD6', '#C0C0B0']
+  },
+  {
+    id: 'agave-flare',
+    name: 'Agave Flare (Вспышка агавы)',
+    category: 'vivid',
+    colors: ['#FFFF00', '#999977', '#888888', '#5D6D7E', '#2C3E50']
+  },
+  {
+    id: 'sunset-shore',
+    name: 'Sunset Shore (Закатный берег)',
+    category: 'atmosphere',
+    colors: ['#CD853F', '#F5B7B1', '#E8E4ED', '#AED6F1', '#5DADE2']
+  },
+  {
+    id: 'purple-lotus',
+    name: 'Purple Lotus (Пурпурный лотос)',
+    category: 'floral',
+    colors: ['#4D0033', '#911E73', '#FADBD8', '#FFEB3B', '#D68910']
+  },
+  {
+    id: 'misty-fir',
+    name: 'Misty Fir (Туманная пихта)',
+    category: 'nature',
+    colors: ['#1A2421', '#888D7E', '#F5FAF5', '#C2D1D9', '#89A6B2']
+  },
+  {
+    id: 'gecko-green',
+    name: 'Gecko Green (Зеленый геккон)',
+    category: 'vivid',
+    colors: ['#306914', '#7FD018', '#D0C8B8', '#9F7B7F', '#515A6B']
+  },
+  {
+    id: 'blue-muscari',
+    name: 'Blue Muscari (Голубой мускари)',
+    category: 'floral',
+    colors: ['#2F3323', '#397D02', '#A3C639', '#BDD4E7', '#2149A8']
+  },
+  {
+    id: 'ancient-key',
+    name: 'Ancient Key (Древний ключ)',
+    category: 'classic',
+    colors: ['#99AFC1', '#2D343E', '#CBB1C1', '#A94A5B', '#1E0E12']
+  },
+  {
+    id: 'floral-tea',
+    name: 'Floral Tea (Цветочный чай)',
+    category: 'floral',
+    colors: ['#BD225B', '#E94E9F', '#E7F2FC', '#8FA8C1', '#2D5F8A']
+  },
+  {
+    id: 'lilac-bloom-soft',
+    name: 'Soft Lilac (Нежная сирень)',
+    category: 'floral',
+    colors: ['#FFFBF4', '#BA96C1', '#7E87B0', '#563574', '#414088']
+  },
+  {
+    id: 'mountain-lake',
+    name: 'Mountain Lake (Горное озеро)',
+    category: 'nature',
+    colors: ['#121F2B', '#005385', '#33B5E5', '#BDBDBD', '#1B5E20']
+  },
+  {
+    id: 'easter-sweets',
+    name: 'Easter Sweets (Пасхальные сладости)',
+    category: 'vivid',
+    colors: ['#A2D2A2', '#F1B0B7', '#F8F2A1', '#9FE7F5', '#2CABB9']
+  },
+  // --- Added: Fourth Batch from USER
+  {
+    id: 'exotic-protea',
+    name: 'Exotic Protea (Экзотическая протея)',
+    category: 'floral',
+    colors: ['#4D0019', '#CC0029', '#FF3366', '#FFDDEE', '#DAEE44']
+  },
+  {
+    id: 'ripe-avocado',
+    name: 'Ripe Avocado (Спелый авокадо)',
+    category: 'nature',
+    colors: ['#446633', '#779922', '#EEDD99', '#CCAA88', '#663311']
+  },
+  {
+    id: 'vintage-baseball',
+    name: 'Vintage Baseball (Винтажный бейсбол)',
+    category: 'earth',
+    colors: ['#CC3333', '#DDBB99', '#AA8866', '#886644', '#442211']
+  },
+  {
+    id: 'wild-huntress',
+    name: 'Wild Huntress (Дикая охотница)',
+    category: 'nature',
+    colors: ['#333322', '#776655', '#EEDDCC', '#CC8844', '#552211']
+  },
+  {
+    id: 'autumn-zinnia',
+    name: 'Autumn Zinnia (Осенняя цинния)',
+    category: 'floral',
+    colors: ['#880000', '#CC2200', '#FF8844', '#FFAA44', '#FFEEEE']
+  },
+  {
+    id: 'morning-dew',
+    name: 'Morning Dew (Утренняя роса)',
+    category: 'atmosphere',
+    colors: ['#FFFFFF', '#E0E0E0', '#BBAA66', '#886633', '#444433']
+  },
+  {
+    id: 'french-macaron',
+    name: 'French Macaron (Французское макарони)',
+    category: 'vivid',
+    colors: ['#BB99AA', '#449988', '#F5EEE9', '#66AA00', '#AA5533']
+  },
+  {
+    id: 'spice-market',
+    name: 'Spice Market (Рынок специй)',
+    category: 'earth',
+    colors: ['#F5A97E', '#C24D11', '#E8AA2D', '#797B8A', '#121212']
+  },
+  {
+    id: 'vibrant-orchard',
+    name: 'Vibrant Orchard (Яркий сад)',
+    category: 'vivid',
+    colors: ['#E3241C', '#FF8C1A', '#FFFF33', '#89CFF0', '#3E7699']
+  },
+  // --- Added: Fifth Batch from USER
+  {
+    id: 'venetian-gondola',
+    name: 'Venetian Gondola (Венецианская гондола)',
+    category: 'classic',
+    colors: ['#E1BDA6', '#D6A43B', '#E15A5B', '#D9E6E6', '#0F4453']
+  },
+  {
+    id: 'knitted-coziness',
+    name: 'Knitted Coziness (Вязаный уют)',
+    category: 'vivid',
+    colors: ['#5B4141', '#C21E47', '#CE96B1', '#F1BC44', '#E66324']
+  },
+  {
+    id: 'summer-pear',
+    name: 'Summer Pear (Летняя груша)',
+    category: 'nature',
+    colors: ['#7E8D41', '#B6C77E', '#C1B795', '#A28466', '#5D4441']
+  },
+  {
+    id: 'golden-sunflower',
+    name: 'Golden Sunflower (Золотой подсолнух)',
+    category: 'nature',
+    colors: ['#FFF100', '#D67D00', '#697B00', '#696B32', '#2B3004']
+  },
+  {
+    id: 'elegant-lily',
+    name: 'Elegant Lily (Элегантная лилия)',
+    category: 'floral',
+    colors: ['#253D06', '#96B141', '#E7E9E1', '#F0B1BD', '#B13C44']
+  },
+  {
+    id: 'berry-muffin',
+    name: 'Berry Muffin (Ягодный маффин)',
+    category: 'vivid',
+    colors: ['#B11144', '#F889BD', '#7E5B4D', '#441E0F']
+  },
+  {
+    id: 'mantis-shadow',
+    name: 'Mantis Shadow (Тень богомола)',
+    category: 'nature',
+    colors: ['#8E7EB1', '#661E33', '#F9FF89', '#91A806', '#063006']
+  },
+  {
+    id: 'crimson-tulip',
+    name: 'Crimson Tulip (Малиновый тюльпан)',
+    category: 'floral',
+    colors: ['#061E0F', '#3C6013', '#F85544', '#B13123', '#881E0E']
+  },
+  {
+    id: 'desert-storm',
+    name: 'Desert Storm (Гроза в пустыне)',
+    category: 'atmosphere',
+    colors: ['#122D55', '#555D66', '#D3C9BF', '#F7965B', '#411E0F']
+  },
+  {
+    id: 'downy-plume',
+    name: 'Downy Plume (Пушистое перо)',
+    category: 'earth',
+    colors: ['#414D5D', '#C66F02', '#D29D51', '#ECD8A1']
+  },
+  // --- Added: Sixth Batch from USER
+  {
+    id: 'sunset-cocktails',
+    name: 'Sunset Cocktails (Закатные коктейли)',
+    category: 'vivid',
+    colors: ['#FF4D4D', '#FF9F1C', '#DDBB99', '#E0E0E0', '#50C878']
+  },
+  {
+    id: 'lemon-zest',
+    name: 'Lemon Zest (Лимонная цедра)',
+    category: 'nature',
+    colors: ['#4B5D43', '#9E9E9E', '#D9D9D9', '#EEDC82', '#E1AD01']
+  },
+  {
+    id: 'chess-board',
+    name: "Grandmaster's Board (Доска гроссмейстера)",
+    category: 'classic',
+    colors: ['#35423E', '#8F9E91', '#C4B7A6', '#A17154', '#6B423A']
+  },
+  {
+    id: 'field-whispers',
+    name: 'Field of Whispers (Поле шепота)',
+    category: 'atmosphere',
+    colors: ['#374A43', '#9EB0A1', '#E5DDD9', '#F9B7B2', '#A66565']
+  },
+  {
+    id: 'neon-shore',
+    name: 'Neon Shore (Неоновый берег)',
+    category: 'vivid',
+    colors: ['#001B44', '#3F51B5', '#A589AA', '#20B2AA', '#2E8B57']
+  },
+  {
+    id: 'alpine-lake',
+    name: 'Alpine Serenity (Альпийское спокойствие)',
+    category: 'nature',
+    colors: ['#212B27', '#344933', '#316B6E', '#C2C5BB', '#C6D1E3']
+  },
+  {
+    id: 'lily-pond',
+    name: 'Water Lily Pond (Пруд с лилиями)',
+    category: 'floral',
+    colors: ['#00334E', '#005D6E', '#8E8EA8', '#869D81', '#D4C491']
+  },
+  {
+    id: 'cloudy-peaks',
+    name: 'Clouded Peaks (Облачные вершины)',
+    category: 'atmosphere',
+    colors: ['#201620', '#8B7380', '#D9C8D4', '#F4D6CE', '#CB8E83']
+  },
+  {
+    id: 'rustic-lemonade',
+    name: 'Rustic Lemonade (Сельский лимонад)',
+    category: 'vivid',
+    colors: ['#E68A00', '#FFD700', '#FDF2E4', '#F0F0E0', '#4B5320']
+  },
+  {
+    id: 'frozen-tundra',
+    name: 'Frozen Tundra (Замерзшая тундра)',
+    category: 'earth',
+    colors: ['#4B2C2C', '#8D6E63', '#C6B8A6', '#BDC3C7', '#78909C']
+  },
+  {
+    id: 'pastel-ceramics',
+    name: 'Pastel Ceramics (Пастельная керамика)',
+    category: 'classic',
+    colors: ['#F9B7C3', '#C1D3CC', '#8B8BAE', '#FFCC80', '#E5E4E2']
   }
 ];
 
