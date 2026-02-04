@@ -1,160 +1,139 @@
-# AETHER — Sequential Art Generator
+# AETHER — Sequential Watercolor Generator
 
-**AETHER** — это интерактивный генеративный инструмент для создания акварельных композиций на основе текста. Каждая буква превращается в точку на математической сетке, а слова формируют плавные траектории, по которым "движется" виртуальная кисть, оставляя органичные акварельные следы.
-
----
-
-## 🎨 Что это?
-
-AETHER генерирует уникальные визуальные композиции из любого введённого текста. Система:
-- Разбивает текст на слова и буквы.
-- Размещает каждую букву в свою зону на сетке (можно выбрать алфавитный или случайный порядок).
-- "Рисует" траекторию между буквами слова виртуальной кистью с эффектами акварели.
-- Применяет выбранный стиль рендеринга (движок) и палитру цветов.
-
-Результат — абстрактная композиция, в которой закодирован ваш текст.
+**AETHER** is an interactive generative tool for creating watercolor compositions from text. Each character is mapped to a zone on a mathematical grid; words become smooth trajectories that a virtual brush follows, leaving organic watercolor marks.
 
 ---
 
-## 🛠 Как это работает?
+## 🎨 What is it?
 
-**Полностью фронтенд, без бэкенда.**
+AETHER transforms any input text into a visual composition. The system:
+- Splits text into words and characters.
+- Places each character into a grid zone (alphabetical or randomized layout).
+- Draws trajectories between characters with a simulated brush that produces watercolor effects.
+- Applies selected rendering style (engine) and color palette.
 
-Проект работает целиком в браузере — никаких серверов, баз данных или внешних API. Всё, что вводит пользователь, обрабатывается локально с помощью JavaScript и библиотеки [p5.js](https://p5js.org/) для рендеринга.
-
-### Технологии
-- **HTML5 Canvas** — холст для рендера графики.
-- **p5.js** — библиотека для креативного программирования и визуализации.
-- **p5.brush** — расширение для имитации органичных кистей (акварель, масло, чернила).
-- **gl-matrix** — математика для работы с матрицами (нужна для p5.brush).
-- **Vanilla JS** — чистый JavaScript без фреймворков.
-
-### Безопасность
-- **Content Security Policy (CSP)** с жёсткими ограничениями.
-- **Subresource Integrity (SRI)** для всех внешних библиотек.
-- Никаких сетевых запросов — данные не покидают ваш браузер.
-- Динамическая загрузка движков ограничена белым списком.
+The output is an abstract image that encodes your input text visually.
 
 ---
 
-## 🎭 Движки рендеринга (Engines)
+## 🛠 How it works
 
-Движки — это изолированные модули, каждый из которых рисует акварель по-своему:
+This is a **pure front-end** project — there is no backend. All processing happens locally in the browser using JavaScript and the p5.js rendering library.
 
-- **Aether Soft** — мягкие органичные пятна с эффектом растекания.
-- **Aether Soft Modern** — современная интерпретация с улучшенными переходами.
-- **Liquid Ink** — имитация жидких чернил с плавными градиентами.
-- **Oil Brush** — густая масляная текстура.
-- **Splatter** — брызги и капли.
-- **Fractal Tree** — фрактальные ветвления вдоль траектории.
-- **Torn Wet Brush** — рваные края, как у мокрой кисти на бумаге.
+### Technologies
+- **HTML5 Canvas** — rendering surface.
+- **p5.js** — creative-coding library.
+- **p5.brush** — optional brush emulation for organic strokes.
+- **gl-matrix** — math utilities (used by brush module).
+- **Vanilla JavaScript** — no front-end framework required.
 
-Каждый движок работает в собственном изолированном буфере и композитится на общий холст только при финальном рендере.
-
----
-
-## 🎨 Палитры
-
-В проекте встроено **70+ палитр**, разделённых по категориям:
-- **Nature** — природные оттенки (листья, деревья, трава).
-- **Floral** — цветочные композиции (розы, лаванда, персик).
-- **Atmosphere** — небесные и туманные тона.
-- **Vivid** — яркие и контрастные цвета.
-- **Earth** — земляные и тёплые оттенки.
-- **Cool** — холодные и минималистичные палитры.
-
-Или просто выберите **Random** — система сама подберёт палитру при каждой генерации.
+### Security
+- **Content Security Policy (CSP)** is applied.
+- **Subresource Integrity (SRI)** is used for external libraries where configured.
+- No network calls or data exfiltration — user input stays in the browser.
+- Dynamic engine loading is restricted to a whitelist.
 
 ---
 
-## 🚀 Использование
+## 🎭 Rendering Engines
 
-### Онлайн (GitHub Pages)
-Проект доступен по ссылке, привязанной к репозиторию GitHub Pages:
-👉 **[Ваша ссылка на GitHub Pages]**
+Rendering engines are isolated modules that implement different visual styles:
 
-Просто откройте ссылку в браузере и начните работать — никакой установки или настройки не требуется.
+- **Aether Soft** — soft, spreading watercolor puddles.
+- **Aether Soft Modern** — refined transitions and smoother blends.
+- **Liquid Ink** — fluid ink-like flow and gradients.
+- **Oil Brush** — thick brush strokes with painterly texture.
+- **Splatter** — scattered drops and splatters.
+- **Fractal Tree** — branching/fractal elements along strokes.
+- **Torn Wet Brush** — torn, ragged wet-edge shapes.
 
-### Локально
-Если хотите запустить проект у себя на компьютере:
-
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/your-username/aether.git
-   cd aether
-   ```
-
-2. Запустите любой локальный HTTP-сервер (проект не работает через `file://` из-за CSP):
-   ```bash
-   # Python
-   python3 -m http.server 8000
-
-   # VS Code: установите расширение "Live Server" и кликните "Go Live"
-
-   # Node.js
-   npx http-server
-   ```
-
-3. Откройте `http://localhost:8000` в браузере.
+Each engine draws to its own internal buffer and composes to the shared canvas during final rendering.
 
 ---
 
-## 📂 Структура проекта
+## 🎨 Palettes
+
+The project includes 70+ curated palettes grouped by category:
+- **Nature**, **Floral**, **Atmosphere**, **Vivid**, **Earth**, **Cool**.
+
+You can also pick `Random` to let the system choose a palette for each generation.
+
+---
+
+## 🚀 Usage
+
+### Hosted (GitHub Pages)
+The project is intended to be served as a static site and can be run from the repository's GitHub Pages URL.
+
+### Local
+If you prefer local testing, serve the repo directory with any static server (CSP prevents file:// usage):
+
+```bash
+git clone https://github.com/your-username/aether.git
+cd aether
+# Python
+python3 -m http.server 8000
+
+# or with Node's http-server
+npx http-server
+
+# Open http://localhost:8000
+```
+
+---
+
+## 📂 Project structure
 
 ```
 aether/
-├── index.html              # Главная страница, UI, переключатели
-├── sketch.js               # Основной контроллер p5.js, логика анимации
-├── dna.js                  # Неизменяемая конфигурация сетки и букв
-├── diffusion.js            # Модуль выбора палитр и маршрутизации движков
+├── index.html           # Main UI, initialization and controls
+├── sketch.js            # p5 controller, interaction logic
+├── dna.js               # Immutable grid and alphabet configuration
+├── diffusion.js         # Palette and inking routing
 ├── palettes/
-│   └── palette.js          # 70+ цветовых палитр
-├── engines/                # Изолированные движки рендеринга
-│   ├── aether-soft/
-│   ├── aether-soft-modern/
-│   ├── liquid-ink/
-│   ├── oil-brush/
-│   ├── splatter/
-│   ├── fractal-tree/
-│   └── torn-wet-brush/
+│   └── palette.js       # Color palettes
+├── engines/             # Isolated rendering engines
 ├── assets/
-│   └── logo.svg            # Логотип
-├── CONTRIBUTING.md         # Правила изоляции движков
-└── README.md               # Этот файл
+│   └── logo.svg
+├── CONTRIBUTING.md      # Engine isolation rules
+└── README.md
 ```
 
 ---
 
-## ✨ Возможности
+## ✨ Features
 
-- ✅ Ввод любого текста (латиница) и разбиение на слова.
-- ✅ Переключение между 7 стилями рендеринга.
-- ✅ Выбор из 70+ палитр с категориями.
-- ✅ Экспорт результата в PNG (без UI).
-- ✅ Переключатели:
-  - **Grid** — показать/скрыть сетку и буквы.
-  - **A-Z** — алфавитный порядок букв (выкл = случайный).
-  - **Dark Mode** — тёмная тема.
-- ✅ Регулировка толщины кисти (для некоторых движков).
-- ✅ Чекбоксы для включения/отключения отдельных слов.
+- Text input and word splitting (Latin letters supported).
+- 7 rendering styles (engines).
+- 70+ palettes with category filtering.
+- PNG export of the artwork.
+- UI toggles: Grid, A-Z (randomize layout), Dark Mode.
+- Brush thickness control for compatible engines.
+- Per-word visibility toggles.
 
 ---
 
-## 🔒 Безопасность и приватность
+## 🔒 Privacy & Security
 
-- **Нет бэкенда** — всё работает в браузере.
-- **Нет отправки данных** — ваш текст не покидает устройство.
-- **Нет cookies, localStorage** — приложение не сохраняет ничего.
-- **CSP + SRI** — защита от XSS и вредоносных скриптов.
-
----
-
-## 🤝 Вклад
-
-См. [CONTRIBUTING.md](CONTRIBUTING.md) для деталей об архитектуре изоляции движков.
+- No backend — everything runs in the browser.
+- No external data collection — text stays local.
+- No persistent storage (no cookies/localStorage used by core logic).
+- CSP + SRI reduce exposure to injected scripts.
 
 ---
 
-## 📄 Лицензия
+## 🤝 Contributing
 
-Проект распространяется под лицензией MIT (или укажите вашу лицензию).
+See `CONTRIBUTING.md` for guidelines on engine isolation and contributions.
+
+---
+
+## 📄 License
+
+This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0).
+
+- You are welcome to use, modify and create art with this project for personal and non-commercial purposes.
+- Commercial use (making money from the project or derivatives) is not permitted under this license.
+
+See the full license text in the `LICENSE` file or online:
+https://creativecommons.org/licenses/by-nc/4.0/
