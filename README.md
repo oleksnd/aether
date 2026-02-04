@@ -1,4 +1,4 @@
-# AETHER — Sequential Watercolor Generator
+# AETHER — Sequential Art Generator
 
 **AETHER** is an interactive generative tool for creating watercolor compositions from text. Each character is mapped to a zone on a mathematical grid; words become smooth trajectories that a virtual brush follows, leaving organic watercolor marks.
 
