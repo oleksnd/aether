@@ -7,24 +7,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Security Headers -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <meta name="referrer" content="no-referrer">
   <title>AETHER - Sequential Art Generator</title>
-  <!-- Local Material Symbols font -->
-  <link rel="stylesheet" href="assets/css/material-symbols-local.css"
-    integrity="sha384-YMgCeFjPObzF1zvE3RBzBdTU1JyUOVmyfoPCbCddZQzDfxsi8svy1/TOklYoviqS" crossorigin="anonymous">
-  <!-- Main styles with SRI -->
-  <link rel="stylesheet" href="assets/css/main.css"
-    integrity="sha384-fOrZYZJ+lfWuaa7kEZpaI/oly4UHOEH2GM7sOCusUpoqt4Y8DQP0pxDr3YyebrFr" crossorigin="anonymous">
-  <!-- Local libraries with SRI -->
-  <script src="libs/p5.js" integrity="sha384-p/6o8GmaZGDMiTfdmUmgM0lCQGZpg5wgbxtDSIp5C+FVs9oGanTpKwFWxOa8ehT2"
-    crossorigin="anonymous"></script>
-  <script src="libs/gl-matrix-min.js"
-    integrity="sha384-iZsEdQFxjZXMEJXbMmLFgTxAXLIhscrTeHOe466nX1siiBSQreDzjxh1VJDWBjya"
-    crossorigin="anonymous"></script>
-  <script src="libs/ray.js" integrity="sha384-A7FLTBI9YOVTtPiGnYxBWjZfys6DpRo01KFQPyv7AmkFPYYjst/bwL+L2vQIJjSa"
-    crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="assets/css/material-symbols-local.css">
+  <link rel="stylesheet" href="assets/css/main.css">
+
+  <script src="libs/p5.js"></script>
+  <script src="libs/gl-matrix-min.js"></script>
+  <script src="libs/ray.js"></script>
 </head>
 
 <body>
@@ -53,6 +46,11 @@
           </div>
         </div>
       </div>
+
+      <!-- Color Lab Link -->
+      <a href="color-lab.html" id="color-lab-btn" title="Color Lab">
+        <span class="material-symbols-outlined">science</span>
+      </a>
 
       <!-- Global Brush thickness slider (shown for styles that support thickness control) -->
       <div id="brush-thickness-wrap">
@@ -110,25 +108,16 @@
     </div>
   </div>
   <!-- Core application scripts -->
-  <script src="dna.js" integrity="sha384-5WD7X3pdgD8ABHJbl5+tAt8FFBODoK4ZH7ewp0pLFXlGFf68Elpp4k+A1PGXZsep"
-    crossorigin="anonymous"></script>
-  <script src="palettes/palette.js" integrity="sha384-nx+qIlHm1D7XWycCGcAdy+9YsAilUMj3JgiHK4Y+W4WAAJua7UF8h8lJIeDBblXC"
-    crossorigin="anonymous"></script>
-  <script src="diffusion.js" integrity="sha384-kWx6z3XMxkLUdtupoEcg3niN3oSKdG/vIce09CtjwyfDQWRWNH5K4yAI//ZfCtEx"
-    crossorigin="anonymous"></script>
-  <script src="sketch.js" integrity="sha384-mUnFZ+dCcIpNKRbDjjigJ477imSScehP6JH5UwyixAbmEX9fGysRvSvgzemHL4zB"
-    crossorigin="anonymous"></script>
-  <!-- UI Scripts with SRI -->
-  <script src="js/ui-handlers.js" integrity="sha384-8Hy96qByd/yC0PwPJnlfylEmUR9rikFVUQtCKNlgppFyuCzKcAgY9GpuJRncdh2h"
-    crossorigin="anonymous"></script>
-  <script src="js/engine-loader.js" integrity="sha384-teCKU6mbc43aPJwFG1/LZlWbFdaWoGjrU1SRza3zv/MjLNkTpZtxgXX1o678dv+A"
-    crossorigin="anonymous"></script>
-  <script src="js/palette-ui.js" integrity="sha384-IyL6iMVSxoZnWwHKQbsi8vCI4OAlmdk/j+NMe1VSLVWtkQ3519Sf8VkdSpcsKpRK"
-    crossorigin="anonymous"></script>
-  <script src="js/word-toggles.js" integrity="sha384-mpxvXK2J80DiAfvx2LEOyZmnhuEPSOxTGpy9sMZDQayr7A4xd+yTAV+eX1+hnvQG"
-    crossorigin="anonymous"></script>
+  <script src="dna.js"></script>
+  <script src="palettes/palette.js"></script>
+  <script src="diffusion.js"></script>
+  <script src="sketch.js"></script>
 
-
+  <!-- UI Scripts -->
+  <script src="js/ui-handlers.js"></script>
+  <script src="js/engine-loader.js"></script>
+  <script src="js/palette-ui.js"></script>
+  <script src="js/word-toggles.js"></script>
 </body>
 
 </html>

@@ -125,7 +125,7 @@ body {
   align-items: flex-start;
 }
 
-#input-container > div:last-child {
+#input-container>div:last-child {
   display: flex;
   gap: 8px;
   margin-top: 10px;
@@ -450,6 +450,40 @@ body.dark-mode #logo {
   display: inline-flex;
   gap: 8px;
   align-items: center;
+}
+
+#color-lab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+#color-lab-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+#color-lab-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #111;
+  transform: scale(1.05);
+}
+
+body.dark-mode #color-lab-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #aaa;
+}
+
+body.dark-mode #color-lab-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #eee;
 }
 
 #brush-thickness {

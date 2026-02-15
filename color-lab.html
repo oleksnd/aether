@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETHER - Color Lab</title>
+    <link rel="stylesheet" href="assets/css/material-symbols-local.css">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/color-lab.css">
+</head>
+
+<body class="lab-body"> <!-- lab-body for specific styles, light mode by default -->
+    <div id="ui">
+        <a id="home-link" href="index.html" title="Home">
+            <img id="logo" src="assets/logo.svg" alt="Logo">
+        </a>
+
+        <div id="left-ui">
+            <a href="index.html" id="back-to-gen-btn" title="Back to Generator">
+                <span class="material-symbols-outlined">palette</span>
+            </a>
+        </div>
+
+        <div id="export-wrap">
+            <span id="dark-label">Dark</span>
+            <button id="dark-toggle" title="Toggle Dark Mode" class="toggle"><span class="toggle-knob"></span></button>
+        </div>
+    </div>
+
+    <div id="lab-container">
+
+        <div id="search-wrap">
+            <input type="text" id="search-input" placeholder="Search by meaning (e.g., decay, ecstasy, moth)..."
+                autocomplete="off">
+        </div>
+
+        <div id="stats">Loading colors...</div>
+        <div id="color-grid">
+            <!-- Colors populate here -->
+        </div>
+    </div>
+
+    <script src="palettes/palette.js"></script>
+    <script src="palettes/palette-metadata.js"></script>
+    <script src="js/color-lab.js"></script>
+</body>
+
+</html>
