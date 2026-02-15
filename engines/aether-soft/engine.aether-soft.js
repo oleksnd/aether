@@ -159,64 +159,6 @@ window.AetherSoftEngine = (function() {
       brushSize *= pulse;
 
       let usedBrush = false;
-      try {
-        let BrushClass = window.Brush || window.P5Brush || window.p5Brush || (window.p5 && window.p5.Brush);
-
-        if (BrushClass) {
-          let brushInstance = null;
-          try {
-            if (typeof BrushClass === 'function') {
-              try { brushInstance = new BrushClass(artLayer); } catch (e) { /* ignore */ }
-              if (!brushInstance && typeof BrushClass.create === 'function') brushInstance = BrushClass.create(artLayer);
-            }
-            if (!brushInstance && typeof window.p5Brush === 'object' && typeof window.p5Brush.createBrush === 'function') {
-              brushInstance = window.p5Brush.createBrush(artLayer);
-            }
-          } catch (e) { brushInstance = null; }
-
-          if (brushInstance) {
-            let baseRGB = Array.isArray(chosenColor) ? chosenColor.slice() : null;
-            let jittered = baseRGB;
-            if (baseRGB) {
-              let hsl = rgbToHsl(baseRGB[0], baseRGB[1], baseRGB[2]);
-              hsl.h += random(-5, 5);
-              hsl.l = constrain(hsl.l + random(-4, 6), 6, 94);
-              jittered = hslToRgb(hsl.h, hsl.s, hsl.l);
-            }
-
-            let rgba = null;
-            if (Array.isArray(jittered)) rgba = `rgba(${jittered[0]},${jittered[1]},${jittered[2]},${(lastInk.alpha||BASE_ALPHA_MAX)/255})`;
-            else rgba = chosenColor;
-
-            let opts = {
-              color: rgba,
-              size: brushSize,
-              wetness: 0.9,
-              spread: 0.85,
-              bleed: 0.9,
-              scattering: 0.15,
-              blend: 'multiply',
-              field: { grain: GRAIN_DENSITY * 2.0 }
-            };
-
-            if (typeof brushInstance.paint === 'function') {
-              brushInstance.paint(x, y, opts);
-              usedBrush = true;
-            } else if (typeof brushInstance.stroke === 'function') {
-              brushInstance.stroke({ x, y, size: brushSize, color: rgba, options: opts });
-              usedBrush = true;
-            } else if (typeof brushInstance.draw === 'function') {
-              brushInstance.draw(x, y, opts);
-              usedBrush = true;
-            } else if (typeof brushInstance === 'function') {
-              brushInstance(x, y, opts);
-              usedBrush = true;
-            }
-          }
-        }
-      } catch (e) {
-        usedBrush = false;
-      }
 
       if (!usedBrush) {
         artLayer.push();

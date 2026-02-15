@@ -61,30 +61,6 @@ let visitedPoints = []; // Track visited points for current word
 
 let artLayer; // Isolated art layer for watercolor
 
-// Dynamically load gl-matrix then p5.brush so runtime errors (like missing mat4) are avoidable
-function loadBrushes(layer) {
-  if (window.p5BrushLoaded || window.Brush || window.p5Brush || window.P5Brush) return Promise.resolve();
-  // Strict Mode: ONLY use loadExternalLib (with SRI), never fallback to insecure loadScript
-  const loadWithSRI = (key) => {
-    if (typeof window.loadExternalLib === 'function') {
-      return window.loadExternalLib(key);
-    }
-    // If loadExternalLib is not available, fail fast - don't load scripts insecurely
-    console.error('[Security] loadExternalLib not available, refusing to load:', key);
-    return Promise.reject(new Error('loadExternalLib not available - security policy prevents insecure script loading'));
-  };
-
-  return loadWithSRI('glMatrix')
-    .then(() => loadWithSRI('p5brush'))
-    .then(() => {
-      try {
-        if (window.p5Brush && typeof window.p5Brush.init === 'function') window.p5Brush.init(layer);
-        if (window.Brush && typeof window.Brush.init === 'function') window.Brush.init(layer);
-      } catch (e) { /* ignore */ }
-      window.p5BrushLoaded = true;
-    });
-}
-
 function setup() {
   createCanvas(windowWidth, windowHeight);
   // Remove noLoop() to enable animation
@@ -102,8 +78,8 @@ function setup() {
     if (window.OilBrushEngine && typeof window.OilBrushEngine.init === 'function') window.OilBrushEngine.init({ width: artLayer.width, height: artLayer.height });
     // WetWatercolorEngine removed (replaced by TornWetBrushEngine)
     if (window.SplatterEngine && typeof window.SplatterEngine.init === 'function') window.SplatterEngine.init({ width: artLayer.width, height: artLayer.height });
-      if (window.FractalTreeEngine && typeof window.FractalTreeEngine.init === 'function') window.FractalTreeEngine.init({ width: artLayer.width, height: artLayer.height });
-      if (window.TornWetBrushEngine && typeof window.TornWetBrushEngine.init === 'function') window.TornWetBrushEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.FractalTreeEngine && typeof window.FractalTreeEngine.init === 'function') window.FractalTreeEngine.init({ width: artLayer.width, height: artLayer.height });
+    if (window.TornWetBrushEngine && typeof window.TornWetBrushEngine.init === 'function') window.TornWetBrushEngine.init({ width: artLayer.width, height: artLayer.height });
   } catch (e) { /* ignore */ }
 
   // Wire up style selector: keep a small runtime state and listen for changes
@@ -186,9 +162,6 @@ function setup() {
       styleSel.addEventListener('click', () => updateBrushSliderVisibility());
     }
   } catch (e) { /* ignore in non-browser contexts */ }
-
-  // Load brush libraries (gl-matrix, p5.brush) asynchronously and init against artLayer
-  loadBrushes(artLayer).catch(() => { /* non-fatal: fallback rendering will be used */ });
 
   // Set font
   textFont('Courier');
@@ -400,7 +373,7 @@ function startGeneration(text) {
   try {
     // Clear any existing layers first
     if (window.wordLayers && Array.isArray(window.wordLayers)) {
-      window.wordLayers.forEach(l => { try { if (typeof l.clear === 'function') l.clear(); } catch (e) {} });
+      window.wordLayers.forEach(l => { try { if (typeof l.clear === 'function') l.clear(); } catch (e) { } });
     }
     window.wordLayers = wordStrings.map(() => {
       const w = (artLayer && artLayer.width) ? artLayer.width : width;
@@ -742,35 +715,35 @@ function highlightCells() {
 async function exportPNG(filename) {
   // helpers
   function ts() { return year() + nf(month(), 2) + nf(day(), 2) + '-' + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2); }
-  
+
   // Secure filename sanitization with protection against path traversal and reserved names
-  function sanitize(s) { 
+  function sanitize(s) {
     if (!s) return 'layer';
-    
+
     // Convert to string and trim
     let clean = String(s).trim();
-    
+
     // Remove path separators and parent directory references
     clean = clean.replace(/[\/\\]/g, '');
-    
+
     // Replace spaces with dashes
     clean = clean.replace(/\s+/g, '-');
-    
+
     // Remove all non-alphanumeric except dash, underscore, dot
     clean = clean.replace(/[^A-Za-z0-9-_\.]/g, '');
-    
+
     // Collapse multiple dashes and remove leading/trailing dashes
     clean = clean.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
-    
+
     // Remove leading dots to prevent hidden files and directory traversal
     clean = clean.replace(/^\.*/, '');
-    
+
     // Protect against Windows reserved names
     const windowsReserved = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i;
     if (windowsReserved.test(clean)) {
       clean = 'file-' + clean;
     }
-    
+
     // Limit filename length (max 200 chars to be safe with ZIP and various filesystems)
     if (clean.length > 200) {
       const ext = clean.match(/\.[^.]+$/);
@@ -780,7 +753,7 @@ async function exportPNG(filename) {
         clean = clean.substring(0, 200);
       }
     }
-    
+
     // Final fallback if everything was stripped
     return clean || 'layer';
   }
@@ -827,7 +800,7 @@ async function exportPNG(filename) {
       const localHeader = new Uint8Array(30 + nameBytes.length);
       let p = 0;
       // signature
-      localHeader.set([0x50,0x4B,0x03,0x04], p); p += 4;
+      localHeader.set([0x50, 0x4B, 0x03, 0x04], p); p += 4;
       // version needed (2 bytes)
       localHeader.set(u16ToLE(20), p); p += 2;
       // general purpose bit flag
@@ -855,7 +828,7 @@ async function exportPNG(filename) {
       // central directory header (to be added later)
       const cdHeader = new Uint8Array(46 + nameBytes.length);
       p = 0;
-      cdHeader.set([0x50,0x4B,0x01,0x02], p); p += 4; // signature
+      cdHeader.set([0x50, 0x4B, 0x01, 0x02], p); p += 4; // signature
       cdHeader.set(u16ToLE(0x0314), p); p += 2; // version made by (arbitrary)
       cdHeader.set(u16ToLE(20), p); p += 2; // version needed
       cdHeader.set(u16ToLE(0), p); p += 2; // flags
@@ -887,7 +860,7 @@ async function exportPNG(filename) {
     // end of central dir
     const eocd = new Uint8Array(22);
     let q = 0;
-    eocd.set([0x50,0x4B,0x05,0x06], q); q += 4; // signature
+    eocd.set([0x50, 0x4B, 0x05, 0x06], q); q += 4; // signature
     eocd.set(u16ToLE(0), q); q += 2; // disk number
     eocd.set(u16ToLE(0), q); q += 2; // disk start
     eocd.set(u16ToLE(centralDirs.length), q); q += 2; // entries this disk
@@ -1017,8 +990,8 @@ async function exportPNG(filename) {
     for (let i = 0; i < wordLayers.length; i++) {
       const buff = createGraphics(w, h);
       buff.background(window.darkMode ? '#141414' : 255);
-      try { buff.image(wordLayers[i], 0, 0); } catch (e) {}
-      if (overlays) { drawGridTo(buff); try { drawPathForWordTo(buff, paths[i], 0); } catch (e) {} }
+      try { buff.image(wordLayers[i], 0, 0); } catch (e) { }
+      if (overlays) { drawGridTo(buff); try { drawPathForWordTo(buff, paths[i], 0); } catch (e) { } }
       toExport.push({ name: base + '-' + (i + 1) + '-' + (words && words[i] ? sanitize(words[i]) : ('layer-' + (i + 1))), gfx: buff });
     }
 
@@ -1027,12 +1000,12 @@ async function exportPNG(filename) {
     final.background(window.darkMode ? '#141414' : 255);
     for (let i = 0; i < wordLayers.length; i++) {
       if (window.wordVisibility && window.wordVisibility[i] === false) continue;
-      try { final.image(wordLayers[i], 0, 0); } catch (e) {}
+      try { final.image(wordLayers[i], 0, 0); } catch (e) { }
     }
-    if (overlays) { drawGridTo(final); for (let i = 0; i < paths.length; i++) { if (window.wordVisibility && window.wordVisibility[i] === false) continue; try { drawPathForWordTo(final, paths[i], 0); } catch (e) {} } }
+    if (overlays) { drawGridTo(final); for (let i = 0; i < paths.length; i++) { if (window.wordVisibility && window.wordVisibility[i] === false) continue; try { drawPathForWordTo(final, paths[i], 0); } catch (e) { } } }
     toExport.push({ name: base + '-final', gfx: final });
   } else if (artLayer) {
-    const buff = createGraphics(w, h); buff.background(window.darkMode ? '#141414' : 255); try { buff.image(artLayer, 0, 0); } catch (e) {}
+    const buff = createGraphics(w, h); buff.background(window.darkMode ? '#141414' : 255); try { buff.image(artLayer, 0, 0); } catch (e) { }
     if (overlays) { drawGridTo(buff); for (let i = 0; i < paths.length; i++) drawPathForWordTo(buff, paths[i], 0); }
     toExport.push({ name: base, gfx: buff });
   } else {
@@ -1058,7 +1031,7 @@ async function exportPNG(filename) {
   }
 
   // Build blobs
-  const blobPromises = toExport.map(item => canvasToBlob(item.gfx).then(b => ({ name: item.name + '.png', blob: b, gfx: item.gfx })) );
+  const blobPromises = toExport.map(item => canvasToBlob(item.gfx).then(b => ({ name: item.name + '.png', blob: b, gfx: item.gfx })));
 
   Promise.all(blobPromises).then(async entries => {
     try {
@@ -1101,7 +1074,7 @@ async function exportPNG(filename) {
       }
     } finally {
       // Cleanup p5 buffers
-      entries.forEach(e => { try { if (e.gfx && typeof e.gfx.remove === 'function') e.gfx.remove(); } catch (ex) {} });
+      entries.forEach(e => { try { if (e.gfx && typeof e.gfx.remove === 'function') e.gfx.remove(); } catch (ex) { } });
     }
   }).catch(err => { console.error('Export failed:', err); });
 }
