@@ -452,7 +452,7 @@ body.dark-mode #logo {
   align-items: center;
 }
 
-#color-lab-btn {
+#pure-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,22 +466,22 @@ body.dark-mode #logo {
   margin-left: 8px;
 }
 
-#color-lab-btn .material-symbols-outlined {
+#pure-btn .material-symbols-outlined {
   font-size: 18px;
 }
 
-#color-lab-btn:hover {
+#pure-btn:hover {
   background: rgba(0, 0, 0, 0.1);
   color: #111;
   transform: scale(1.05);
 }
 
-body.dark-mode #color-lab-btn {
+body.dark-mode #pure-btn {
   background: rgba(255, 255, 255, 0.1);
   color: #aaa;
 }
 
-body.dark-mode #color-lab-btn:hover {
+body.dark-mode #pure-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   color: #eee;
 }
